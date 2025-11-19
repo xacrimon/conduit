@@ -1,4 +1,5 @@
 mod assets;
+mod autoreload;
 mod error;
 
 use crate::AppState;
@@ -8,6 +9,7 @@ pub use error::AppError;
 pub fn routes() -> axum::Router<AppState> {
     axum::Router::new()
         .merge(assets::routes())
+        .merge(autoreload::routes())
         .route("/", get(page))
 }
 
