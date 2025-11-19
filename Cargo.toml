@@ -1,0 +1,15 @@
+[package]
+name = "conduit"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+
+[dependencies]
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.release]
+opt-level = "z"
+lto = "thin"
+codegen-units = 1
