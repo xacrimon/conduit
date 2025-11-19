@@ -1,5 +1,6 @@
 mod db;
 mod metrics;
+mod routes;
 mod signal;
 
 use anyhow::Result;
@@ -30,6 +31,7 @@ pub async fn main() -> Result<()> {
     let app_state = AppState {};
 
     let app = axum::Router::new()
+        .merge(routes::routes())
         .merge(metrics::routes())
         .layer(middleware)
         .with_state(app_state);
