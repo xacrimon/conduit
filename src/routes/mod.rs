@@ -1,3 +1,4 @@
+mod assets;
 mod error;
 
 use crate::AppState;
@@ -5,7 +6,9 @@ use axum::routing::get;
 pub use error::AppError;
 
 pub fn routes() -> axum::Router<AppState> {
-    axum::Router::new().route("/", get(page))
+    axum::Router::new()
+        .merge(assets::routes())
+        .route("/", get(page))
 }
 
 fn document(markup: maud::Markup, title: &str) -> maud::Markup {
