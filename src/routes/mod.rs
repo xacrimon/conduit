@@ -24,7 +24,7 @@ fn document(markup: maud::Markup, title: &str) -> maud::Markup {
 
             body {
                 (header())
-                main #content { (markup) }
+                main { (markup) }
                 (footer())
             }
         }
