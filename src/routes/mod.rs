@@ -34,15 +34,14 @@ fn document(markup: maud::Markup, title: &str, session: Option<Session>) -> maud
             }
 
             body {
-                (header(session))
+                (header(&session))
                 main { (markup) }
-                (footer())
             }
         }
     }
 }
 
-fn header(session: Option<Session>) -> maud::Markup {
+fn header(session: &Option<Session>) -> maud::Markup {
     maud::html! {
         nav {
             span {
@@ -55,19 +54,26 @@ fn header(session: Option<Session>) -> maud::Markup {
                     }
                 }
             }
-            div {
-                span {
-                    a href="/login" { "Log in" }
-                    " - "
-                    a href="/register" { "Register" }
+            @if let Some(session) = session {
+                div {
+                    span {
+                        "Logged in as "
+                        a href={"/~" (session.username)} { (session.username) }
+                        " - "
+                        a href="/logout" { "Log out" }
+                    }
+                }
+            } @else {
+                div {
+                    span {
+                        a href="/login" { "Log in" }
+                        " - "
+                        a href="/register" { "Register" }
+                    }
                 }
             }
         }
     }
-}
-
-fn footer() -> maud::Markup {
-    maud::html! {}
 }
 
 async fn page(session: Option<Session>) -> maud::Markup {

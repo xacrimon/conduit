@@ -11,7 +11,9 @@ use axum_extra::extract::cookie::CookieJar;
 pub const COOKIE_NAME: &str = "conduit_session";
 
 #[derive(Debug, Clone)]
-pub struct Session {}
+pub struct Session {
+    pub username: String,
+}
 
 impl FromRequestParts<AppState> for Session {
     type Rejection = Redirect;
@@ -54,7 +56,12 @@ pub async fn middleware(
         if let Some(session) = maybe_session
             && session.expires > time::OffsetDateTime::now_utc()
         {
-            request.extensions_mut().insert(Session {});
+            let user = model::user::get_by_id(session.user_id).await?.unwrap();
+            let auth_session = Session {
+                username: user.username,
+            };
+
+            request.extensions_mut().insert(auth_session);
         } else {
             let cookie = cookie.clone();
             jar = jar.remove(cookie);

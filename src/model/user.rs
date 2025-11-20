@@ -9,7 +9,7 @@ pub struct UserId(pub(super) i32);
 #[derive(Debug, Clone)]
 pub struct User {
     pub id: UserId,
-    pub name: String,
+    pub username: String,
     pub password_hash: String,
 }
 
@@ -43,4 +43,25 @@ pub async fn login(username: &str, password: &str) -> Result<UserId> {
     .await?;
 
     Ok(UserId(id))
+}
+
+pub async fn get_by_id(user_id: UserId) -> Result<Option<User>> {
+    let db = db::get().await?;
+
+    let record = sqlx::query!(
+        "SELECT id, username, password_hash FROM users WHERE id = $1",
+        user_id.0,
+    )
+    .fetch_optional(db)
+    .await?;
+
+    if let Some(record) = record {
+        Ok(Some(User {
+            id: UserId(record.id),
+            username: record.username,
+            password_hash: record.password_hash,
+        }))
+    } else {
+        Ok(None)
+    }
 }

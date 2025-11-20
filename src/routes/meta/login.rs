@@ -29,7 +29,7 @@ async fn page_login(session: Option<Session>) -> maud::Markup {
         }
     };
 
-    document(markup, "login", session)
+    document(markup, "log in", session)
 }
 
 #[derive(Deserialize)]
