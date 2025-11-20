@@ -1,6 +1,7 @@
 mod assets;
 mod autoreload;
 mod error;
+mod hub;
 mod meta;
 mod paste;
 
@@ -14,6 +15,7 @@ pub fn routes() -> axum::Router<AppState> {
     axum::Router::new()
         .merge(assets::routes())
         .merge(autoreload::routes())
+        .merge(hub::routes())
         .merge(meta::routes())
         .merge(paste::routes())
         .route("/", get(page))
@@ -49,7 +51,7 @@ fn document<S: Into<Option<Session>>>(
 
 fn header(session: &Option<Session>) -> maud::Markup {
     maud::html! {
-        nav .container .navbar {
+        nav .container .navbar .navbar-expand {
             span {
                 a href="/" { "conduit" }
             }

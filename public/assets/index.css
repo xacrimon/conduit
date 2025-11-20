@@ -4,11 +4,42 @@
     margin-right: auto;
 }
 
+@media (min-width: 576px) {
+    .container {
+        max-width: 540px;
+    }
+}
+
+@media (min-width: 768px) {
+    .container {
+        max-width: 720px;
+    }
+}
+
+@media (min-width: 992px) {
+    .container {
+        max-width: 960px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1140px;
+    }
+}
+
 .navbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
+}
+
+@media (min-width: 576px) {
+    .navbar-expand {
+        flex-flow: row nowrap;
+        justify-content: flex-start;
+    }
 }
 
 .navbar-nav {
