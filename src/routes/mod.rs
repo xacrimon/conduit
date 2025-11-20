@@ -47,14 +47,13 @@ fn header(session: &Option<Session>) -> maud::Markup {
             span {
                 a href="/" { "conduit" }
             }
-            @if let Some(_session) = session {
+            @if let Some(session) = session {
                 ul {
                     li {
                         a href="/paste" { "paste" }
                     }
                 }
-            }
-            @if let Some(session) = session {
+
                 div {
                     span {
                         "Logged in as "
