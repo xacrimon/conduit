@@ -49,12 +49,12 @@ fn document<S: Into<Option<Session>>>(
 
 fn header(session: &Option<Session>) -> maud::Markup {
     maud::html! {
-        nav {
+        nav .container .navbar {
             span {
                 a href="/" { "conduit" }
             }
             @if let Some(session) = session {
-                ul {
+                ul .navbar-nav {
                     li { a href="/paste" { "paste" } }
                     li { a href="/meta" { "meta" } }
                 }
@@ -68,7 +68,7 @@ fn header(session: &Option<Session>) -> maud::Markup {
                     }
                 }
             } @else {
-                div {
+                div .navbar-right {
                     span {
                         a href="/login" { "Log in" }
                         " - "

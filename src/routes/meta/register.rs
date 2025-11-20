@@ -1,8 +1,8 @@
+use super::document;
 use crate::AppState;
 use crate::auth::Session;
 use crate::model;
 use crate::routes::AppError;
-use crate::routes::document;
 use axum::extract::Form;
 use axum::response::Redirect;
 use axum::routing::{get, post};

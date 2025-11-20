@@ -1,6 +1,6 @@
+use super::document;
 use crate::AppState;
 use crate::auth::Session;
-use crate::routes::document;
 use axum::routing::get;
 
 pub fn routes() -> axum::Router<AppState> {
