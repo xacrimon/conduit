@@ -36,8 +36,7 @@ fn document<S: Into<Option<Session>>>(
                 meta name="viewport" content="width=device-width, initial-scale=1.0";
                 link rel="stylesheet" href="/assets/reset.css";
                 link rel="stylesheet" href="/assets/index.css";
-                script src="/assets/htmx-2.0.8.js" {}
-                script src="/assets/autoreload.js" {}
+                (scripts())
                 title { (title) " - conduit" }
             }
 
@@ -46,6 +45,18 @@ fn document<S: Into<Option<Session>>>(
                 main .container { (markup) }
             }
         }
+    }
+}
+
+fn scripts() -> maud::Markup {
+    #[cfg(debug_assertions)]
+    maud::html! {
+        script src="/assets/htmx-2.0.8.js" {}
+        script src="/assets/autoreload.js" {}
+    }
+    #[cfg(not(debug_assertions))]
+    maud::html! {
+        script src="/assets/htmx-2.0.8.min.js" {}
     }
 }
 
