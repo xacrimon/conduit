@@ -1,4 +1,5 @@
 use crate::AppState;
+use crate::auth::Session;
 use crate::model;
 use crate::routes::AppError;
 use crate::routes::document;
@@ -13,7 +14,7 @@ pub fn routes() -> axum::Router<AppState> {
         .route("/register", post(do_register))
 }
 
-async fn page_register() -> maud::Markup {
+async fn page_register(session: Option<Session>) -> maud::Markup {
     let markup = maud::html! {
         form method="post" {
             label for="username" { "Username:" }
@@ -26,7 +27,7 @@ async fn page_register() -> maud::Markup {
         }
     };
 
-    document(markup, "register")
+    document(markup, "register", session)
 }
 
 #[derive(Deserialize)]

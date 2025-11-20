@@ -1,5 +1,6 @@
 use crate::AppState;
 use crate::auth;
+use crate::auth::Session;
 use crate::model;
 use crate::routes::AppError;
 use crate::routes::document;
@@ -15,7 +16,7 @@ pub fn routes() -> axum::Router<AppState> {
         .route("/login", post(do_login))
 }
 
-async fn page_login() -> maud::Markup {
+async fn page_login(session: Option<Session>) -> maud::Markup {
     let markup = maud::html! {
         form method="post" {
             label for="username" { "Username:" }
@@ -28,7 +29,7 @@ async fn page_login() -> maud::Markup {
         }
     };
 
-    document(markup, "login")
+    document(markup, "login", session)
 }
 
 #[derive(Deserialize)]
@@ -48,10 +49,7 @@ async fn do_login(
     Form(login): Form<LoginForm>,
 ) -> Result<(CookieJar, Redirect), AppError> {
     let redirect = query.redirect;
-    let LoginForm {
-        username,
-        password,
-    } = login;
+    let LoginForm { username, password } = login;
 
     let user_id = model::user::login(&username, &password).await?;
     let session = model::session::create(user_id).await?;

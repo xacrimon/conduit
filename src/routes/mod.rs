@@ -7,6 +7,7 @@ mod paste;
 pub use error::AppError;
 
 use crate::AppState;
+use crate::auth::Session;
 use axum::routing::get;
 
 pub fn routes() -> axum::Router<AppState> {
@@ -18,7 +19,7 @@ pub fn routes() -> axum::Router<AppState> {
         .route("/", get(page))
 }
 
-fn document(markup: maud::Markup, title: &str) -> maud::Markup {
+fn document(markup: maud::Markup, title: &str, session: Option<Session>) -> maud::Markup {
     maud::html! {
         (maud::DOCTYPE)
         html lang="en" {
@@ -33,7 +34,7 @@ fn document(markup: maud::Markup, title: &str) -> maud::Markup {
             }
 
             body {
-                (header())
+                (header(session))
                 main { (markup) }
                 (footer())
             }
@@ -41,18 +42,38 @@ fn document(markup: maud::Markup, title: &str) -> maud::Markup {
     }
 }
 
-fn header() -> maud::Markup {
-    maud::html! {}
+fn header(session: Option<Session>) -> maud::Markup {
+    maud::html! {
+        nav {
+            span {
+                a href="/" { "conduit" }
+            }
+            @if let Some(_session) = session {
+                ul {
+                    li {
+                        a href="/paste" { "paste" }
+                    }
+                }
+            }
+            div {
+                span {
+                    a href="/login" { "Log in" }
+                    " - "
+                    a href="/register" { "Register" }
+                }
+            }
+        }
+    }
 }
 
 fn footer() -> maud::Markup {
     maud::html! {}
 }
 
-async fn page() -> maud::Markup {
+async fn page(session: Option<Session>) -> maud::Markup {
     let markup = maud::html! {
         h1 { "Hello, World!" }
     };
 
-    document(markup, "home")
+    document(markup, "home", session)
 }
