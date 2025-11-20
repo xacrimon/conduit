@@ -43,7 +43,7 @@ fn document<S: Into<Option<Session>>>(
 
             body {
                 (header(&session))
-                main { (markup) }
+                main .container { (markup) }
             }
         }
     }

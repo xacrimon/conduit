@@ -35,13 +35,6 @@
     justify-content: space-between;
 }
 
-@media (min-width: 576px) {
-    .navbar-expand {
-        flex-flow: row nowrap;
-        justify-content: flex-start;
-    }
-}
-
 .navbar-nav {
     flex-grow: 1;
     display: flex;
