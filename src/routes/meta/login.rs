@@ -15,30 +15,15 @@ pub fn routes() -> axum::Router<AppState> {
         .route("/login", post(do_login))
 }
 
-#[derive(Deserialize)]
-struct Login {
-    redirect: Option<String>,
-}
-
-async fn page_login(Query(login): Query<Login>) -> maud::Markup {
-    let redirect_input = match login.redirect {
-        Some(redirect) => {
-            maud::html! {
-                input type="hidden" name="redirect" value=(redirect);
-            }
-        }
-        None => maud::html! {},
-    };
-
+async fn page_login() -> maud::Markup {
     let markup = maud::html! {
-        form action="/login" method="post" {
+        form method="post" {
             label for="username" { "Username:" }
             input type="text" name="username" required;
 
             label for="password" { "Password:" }
             input type="password" name="password" required;
 
-            (redirect_input)
             input type="submit" value="Log in";
         }
     };
@@ -47,20 +32,25 @@ async fn page_login(Query(login): Query<Login>) -> maud::Markup {
 }
 
 #[derive(Deserialize)]
-struct DoLogin {
+struct LoginQuery {
+    redirect: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct LoginForm {
     username: String,
     password: String,
-    redirect: Option<String>,
 }
 
 async fn do_login(
     mut jar: CookieJar,
-    Form(login): Form<DoLogin>,
+    Query(query): Query<LoginQuery>,
+    Form(login): Form<LoginForm>,
 ) -> Result<(CookieJar, Redirect), AppError> {
-    let DoLogin {
+    let redirect = query.redirect;
+    let LoginForm {
         username,
         password,
-        redirect,
     } = login;
 
     let user_id = model::user::login(&username, &password).await?;
