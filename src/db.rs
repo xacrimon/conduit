@@ -7,38 +7,39 @@ use sqlx::Executor;
 use sqlx::Transaction;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Postgres};
-use std::sync::LazyLock;
+use std::env;
 use std::time::Duration;
 use tokio::sync::OnceCell;
 use tokio::time;
 
 pub async fn get() -> Result<&'static PgPool> {
-    static DB_URL: LazyLock<String> = LazyLock::new(|| std::env::var("DATABASE_URL").unwrap());
     static DB: OnceCell<PgPool> = OnceCell::const_new();
 
     DB.get_or_try_init::<Error, _, _>(async || {
-        let pool = PgPoolOptions::new()
-            .max_connections(8)
-            .min_connections(4)
-            .acquire_slow_level(LevelFilter::Warn)
-            .acquire_slow_threshold(Duration::from_millis(250))
-            .acquire_timeout(Duration::from_secs(5))
-            .max_lifetime(Duration::from_secs(3600))
-            .idle_timeout(Duration::from_secs(300))
-            .after_connect(|conn, _meta| {
-                async move {
-                    conn.execute("SET application_name = 'conduit';").await?;
-                    Ok(())
-                }
-                .boxed()
-            })
-            .connect(&DB_URL)
-            .await?;
-
+        let url = env::var("DATABASE_URL").unwrap();
+        let pool = pool_options().connect(&url).await?;
         sqlx::migrate!("./migrations").run(&pool).await?;
         Ok(pool)
     })
     .await
+}
+
+fn pool_options() -> PgPoolOptions {
+    PgPoolOptions::new()
+        .max_connections(8)
+        .min_connections(4)
+        .acquire_slow_level(LevelFilter::Warn)
+        .acquire_slow_threshold(Duration::from_millis(250))
+        .acquire_timeout(Duration::from_secs(5))
+        .max_lifetime(Duration::from_secs(3600))
+        .idle_timeout(Duration::from_secs(300))
+        .after_connect(|conn, _meta| {
+            async move {
+                conn.execute("SET application_name = 'conduit';").await?;
+                Ok(())
+            }
+            .boxed()
+        })
 }
 
 pub async fn transaction<A, T, F>(args: A, mut callback: F) -> Result<T>

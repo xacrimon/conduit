@@ -1,12 +1,11 @@
 mod db;
 mod metrics;
+mod model;
 mod routes;
 mod signal;
 
 use anyhow::Result;
-use tokio::time::Duration;
 use tower::ServiceBuilder;
-use tower_http::timeout::TimeoutLayer;
 use tracing::{error, info};
 
 const ADDR: &str = "0.0.0.0:8080";
@@ -26,9 +25,8 @@ pub async fn main() -> Result<()> {
     db::get().await?;
     metrics::get();
 
-    let middleware = ServiceBuilder::new().layer(TimeoutLayer::new(Duration::from_secs(10)));
-
     let app_state = AppState {};
+    let middleware = ServiceBuilder::new();
 
     let app = axum::Router::new()
         .merge(routes::routes())

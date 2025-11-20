@@ -31,8 +31,8 @@ macro_rules! metrics {
 }
 
 metrics! {
-    IntCounter, test_counter, "A test counter metric",
-    IntGauge, test_gauge, "A test gauge metric"
+    IntCounter, _test_counter, "A test counter metric",
+    IntGauge, _test_gauge, "A test gauge metric"
 }
 
 pub fn get() -> &'static Metrics {
