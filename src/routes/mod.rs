@@ -19,7 +19,13 @@ pub fn routes() -> axum::Router<AppState> {
         .route("/", get(page))
 }
 
-fn document(markup: maud::Markup, title: &str, session: Option<Session>) -> maud::Markup {
+fn document<S: Into<Option<Session>>>(
+    markup: maud::Markup,
+    title: &str,
+    session: S,
+) -> maud::Markup {
+    let session = session.into();
+
     maud::html! {
         (maud::DOCTYPE)
         html lang="en" {
@@ -49,9 +55,8 @@ fn header(session: &Option<Session>) -> maud::Markup {
             }
             @if let Some(session) = session {
                 ul {
-                    li {
-                        a href="/paste" { "paste" }
-                    }
+                    li { a href="/paste" { "paste" } }
+                    li { a href="/meta" { "meta" } }
                 }
 
                 div {
