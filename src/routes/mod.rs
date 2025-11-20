@@ -61,7 +61,7 @@ fn header(session: &Option<Session>) -> maud::Markup {
                     li { a href="/meta" { "meta" } }
                 }
 
-                div {
+                div .navbar-right {
                     span {
                         "Logged in as "
                         a href={"/~" (session.username)} { (session.username) }

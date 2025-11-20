@@ -12,7 +12,8 @@ CREATE TABLE sessions (
 
 CREATE TABLE pastes (
     id integer primary key generated always as identity,
-    external_id uuid not null unique
+    external_id uuid not null unique,
+    visibility text not null check (visibility in ('public', 'unlisted', 'private'))
 );
 
 CREATE TABLE paste_revisions (
