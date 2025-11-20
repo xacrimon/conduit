@@ -13,7 +13,7 @@ pub struct Session {
 
 pub async fn create(user_id: UserId) -> Result<Session> {
     let db = db::get().await?;
-    let buf: [u8; 32] = rand::random();
+    let buf: [u8; 16] = rand::random();
     let token = BASE64_STANDARD.encode(buf);
     let expires = OffsetDateTime::now_utc() + time::Duration::days(30);
 
