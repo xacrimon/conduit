@@ -32,3 +32,24 @@ pub async fn create(user_id: UserId) -> Result<Session> {
         expires,
     })
 }
+
+pub async fn get_by_token(token: &str) -> Result<Option<Session>> {
+    let db = db::get().await?;
+
+    let record = sqlx::query!(
+        "SELECT user_id, expires FROM sessions WHERE token = $1",
+        token
+    )
+    .fetch_optional(db)
+    .await?;
+
+    if let Some(record) = record {
+        Ok(Some(Session {
+            token: token.to_owned(),
+            user_id: UserId(record.user_id),
+            expires: record.expires,
+        }))
+    } else {
+        Ok(None)
+    }
+}

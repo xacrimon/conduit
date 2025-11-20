@@ -4,6 +4,8 @@ mod error;
 mod meta;
 mod paste;
 
+pub use error::AppError;
+
 use crate::AppState;
 use axum::routing::get;
 

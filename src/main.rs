@@ -1,3 +1,4 @@
+mod auth;
 mod db;
 mod metrics;
 mod model;
@@ -26,7 +27,7 @@ pub async fn main() -> Result<()> {
     metrics::get();
 
     let app_state = AppState {};
-    let middleware = ServiceBuilder::new();
+    let middleware = ServiceBuilder::new().layer(axum::middleware::from_fn(auth::middleware));
 
     let app = axum::Router::new()
         .merge(routes::routes())

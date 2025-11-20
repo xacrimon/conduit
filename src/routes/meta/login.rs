@@ -1,11 +1,12 @@
 use crate::AppState;
+use crate::auth;
 use crate::model;
+use crate::routes::AppError;
 use crate::routes::document;
-use crate::routes::error::AppError;
-use axum::extract::Form;
+use axum::extract::{Form, Query};
 use axum::response::Redirect;
 use axum::routing::{get, post};
-use axum_extra::extract::cookie::{Cookie, CookieJar};
+use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use serde::Deserialize;
 
 pub fn routes() -> axum::Router<AppState> {
@@ -14,7 +15,21 @@ pub fn routes() -> axum::Router<AppState> {
         .route("/login", post(do_login))
 }
 
-async fn page_login() -> maud::Markup {
+#[derive(Deserialize)]
+struct Login {
+    redirect: Option<String>,
+}
+
+async fn page_login(Query(login): Query<Login>) -> maud::Markup {
+    let redirect_input = match login.redirect {
+        Some(redirect) => {
+            maud::html! {
+                input type="hidden" name="redirect" value=(redirect);
+            }
+        }
+        None => maud::html! {},
+    };
+
     let markup = maud::html! {
         form action="/login" method="post" {
             label for="username" { "Username:" }
@@ -23,6 +38,7 @@ async fn page_login() -> maud::Markup {
             label for="password" { "Password:" }
             input type="password" name="password" required;
 
+            (redirect_input)
             input type="submit" value="Log in";
         }
     };
@@ -31,7 +47,7 @@ async fn page_login() -> maud::Markup {
 }
 
 #[derive(Deserialize)]
-struct Login {
+struct DoLogin {
     username: String,
     password: String,
     redirect: Option<String>,
@@ -39,9 +55,9 @@ struct Login {
 
 async fn do_login(
     mut jar: CookieJar,
-    Form(login): Form<Login>,
+    Form(login): Form<DoLogin>,
 ) -> Result<(CookieJar, Redirect), AppError> {
-    let Login {
+    let DoLogin {
         username,
         password,
         redirect,
@@ -50,8 +66,9 @@ async fn do_login(
     let user_id = model::user::login(&username, &password).await?;
     let session = model::session::create(user_id).await?;
 
-    let cookie = Cookie::build(("conduit_session", session.token))
+    let cookie = Cookie::build((auth::COOKIE_NAME, session.token))
         .http_only(true)
+        .same_site(SameSite::Lax)
         .expires(session.expires);
 
     jar = jar.add(cookie);
