@@ -1,15 +1,18 @@
 mod assets;
 mod autoreload;
 mod error;
+mod meta;
+mod paste;
 
 use crate::AppState;
 use axum::routing::get;
-pub use error::AppError;
 
 pub fn routes() -> axum::Router<AppState> {
     axum::Router::new()
         .merge(assets::routes())
         .merge(autoreload::routes())
+        .merge(meta::routes())
+        .merge(paste::routes())
         .route("/", get(page))
 }
 
@@ -24,7 +27,7 @@ fn document(markup: maud::Markup, title: &str) -> maud::Markup {
                 link rel="stylesheet" href="/assets/index.css";
                 script src="/assets/htmx-2.0.8.js" {}
                 script src="/assets/autoreload.js" {}
-                title { "conduit | " (title) }
+                title { (title) " - conduit" }
             }
 
             body {
