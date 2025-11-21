@@ -1,5 +1,34 @@
 @import "tailwindcss";
 
+.page-container {
+    width: 100%;
+}
+
+@media (min-width: 576px) {
+    .page-container {
+        max-width: 540px;
+    }
+}
+
+@media (min-width: 768px) {
+    .page-container {
+        max-width: 720px;
+    }
+}
+
+@media (min-width: 992px) {
+    .page-container {
+        max-width: 960px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .page-container {
+        max-width: 1140px;
+    }
+}
+
+/*
 .container {
     width: 100%;
     margin-left: auto;
@@ -53,3 +82,4 @@
 } 
 
 .navbar-right {}
+*/

@@ -3,6 +3,7 @@ use axum::http::request::Parts;
 use axum::middleware::Next;
 use axum::response::{Redirect, Response};
 use axum_extra::extract::cookie::CookieJar;
+use url::form_urlencoded;
 
 use crate::routes::AppError;
 use crate::{AppState, model};
@@ -25,7 +26,7 @@ impl FromRequestParts<AppState> for Session {
             Ok(session)
         } else {
             let path_and_query = parts.uri.path_and_query().unwrap().as_str();
-            let encoded = url::form_urlencoded::byte_serialize(path_and_query.as_bytes());
+            let encoded = form_urlencoded::byte_serialize(path_and_query.as_bytes());
             let destination = format!("/login?redirect={}", encoded.collect::<String>());
             Err(Redirect::to(&destination))
         }

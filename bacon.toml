@@ -105,7 +105,7 @@ command = [
 need_stdout = true
 allow_warnings = true
 background = false
-watch = ["public"]
+watch = ["styles"]
 on_change_strategy = "kill_then_restart"
 # kill = ["pkill", "-TERM", "-P"]
 

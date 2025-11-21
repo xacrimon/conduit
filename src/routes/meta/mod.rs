@@ -21,12 +21,10 @@ pub fn routes() -> axum::Router<AppState> {
 
 fn meta_nav() -> maud::Markup {
     maud::html! {
-        div .container {
-            div {
-                ul .nav {
-                    li { a href="/meta/profile" { "profile" } }
-                    li { a href="/meta/keys" { "keys" } }
-                }
+        div {
+            ul .flex .gap-4 {
+                li { a .hover:underline href="/meta/profile" { "profile" } }
+                li { a .hover:underline href="/meta/keys" { "keys" } }
             }
         }
     }

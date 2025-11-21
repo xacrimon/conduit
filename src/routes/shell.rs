@@ -20,7 +20,7 @@ pub fn document<S: Into<Option<Session>>>(
 
             body {
                 (header(&session))
-                main .container { (markup) }
+                main .container .m-auto .px-50 .m-auto { (markup) }
             }
         }
     }
@@ -40,30 +40,30 @@ fn scripts() -> maud::Markup {
 
 fn header(session: &Option<Session>) -> maud::Markup {
     maud::html! {
-        nav .container .navbar .navbar-expand {
+        nav .container .m-auto .px-50 .mb-4 .flex .justify-between {
             span {
-                a href="/" { "conduit" }
+                a .hover:underline href="/" { "conduit" }
             }
             @if let Some(session) = session {
-                ul .nav .nav-top .navbar-expand {
-                    li { a href="/paste" { "paste" } }
-                    li { a href="/meta" { "meta" } }
+                ul .flex .grow .ms-12 .gap-8 {
+                    li { a .hover:underline href="/paste" { "paste" } }
+                    li { a .hover:underline href="/meta" { "meta" } }
                 }
 
-                div .navbar-right {
+                div {
                     span {
                         "Logged in as "
-                        a href={"/~" (session.username)} { (session.username) }
+                        a .underline href={"/~" (session.username)} { (session.username) }
                         " - "
-                        a href="/logout" { "Log out" }
+                        a .underline href="/logout" { "Log out" }
                     }
                 }
             } @else {
-                div .navbar-right {
+                div {
                     span {
-                        a href="/login" { "Log in" }
+                        a .underline href="/login" { "Log in" }
                         " - "
-                        a href="/register" { "Register" }
+                        a .underline href="/register" { "Register" }
                     }
                 }
             }
