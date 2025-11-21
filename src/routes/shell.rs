@@ -13,7 +13,8 @@ pub fn document<S: Into<Option<Session>>>(
             head {
                 meta charset="UTF-8";
                 meta name="viewport" content="width=device-width, initial-scale=1.0";
-                (styles_and_scripts())
+                link rel="stylesheet" href="/assets/index.css";
+                (scripts())
                 title { (title) " - conduit" }
             }
 
@@ -25,18 +26,15 @@ pub fn document<S: Into<Option<Session>>>(
     }
 }
 
-fn styles_and_scripts() -> maud::Markup {
+fn scripts() -> maud::Markup {
     #[cfg(debug_assertions)]
     maud::html! {
         script src="/assets/htmx-2.0.8.js" {}
         script src="/assets/autoreload.js" {}
-        script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4" {}
-        link rel="stylesheet" href="/assets/index.css";
     }
     #[cfg(not(debug_assertions))]
     maud::html! {
         script src="/assets/htmx-2.0.8.min.js" {}
-        link rel="stylesheet" href="/assets/index.css";
     }
 }
 
