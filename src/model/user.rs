@@ -1,7 +1,9 @@
-use crate::db;
 use anyhow::Result;
-use base64::engine::{Engine, general_purpose::STANDARD as BASE64_STANDARD};
+use base64::engine::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use sha2::{Digest, Sha256};
+
+use crate::db;
 
 #[derive(Debug, Clone, Copy)]
 pub struct UserId(pub(super) i32);

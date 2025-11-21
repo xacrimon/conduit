@@ -6,11 +6,11 @@ mod meta;
 mod paste;
 mod shell;
 
+use axum::routing::get;
 pub use error::AppError;
 
 use crate::AppState;
 use crate::auth::Session;
-use axum::routing::get;
 
 pub fn routes() -> axum::Router<AppState> {
     axum::Router::new()

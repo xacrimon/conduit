@@ -1,14 +1,12 @@
+use std::env;
+use std::time::Duration;
+
 use anyhow::{Error, Result};
 use futures::FutureExt;
 use futures::future::BoxFuture;
 use log::LevelFilter;
-use sqlx::Connection;
-use sqlx::Executor;
-use sqlx::Transaction;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool, Postgres};
-use std::env;
-use std::time::Duration;
+use sqlx::{Connection, Executor, PgPool, Postgres, Transaction};
 use tokio::sync::OnceCell;
 use tokio::time;
 

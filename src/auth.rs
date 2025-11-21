@@ -1,12 +1,11 @@
-use crate::AppState;
-use crate::model;
-use crate::routes::AppError;
-use axum::extract::Request;
-use axum::extract::{FromRequestParts, OptionalFromRequestParts};
+use axum::extract::{FromRequestParts, OptionalFromRequestParts, Request};
 use axum::http::request::Parts;
 use axum::middleware::Next;
 use axum::response::{Redirect, Response};
 use axum_extra::extract::cookie::CookieJar;
+
+use crate::routes::AppError;
+use crate::{AppState, model};
 
 pub const COOKIE_NAME: &str = "conduit_session";
 

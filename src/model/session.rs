@@ -1,8 +1,10 @@
+use anyhow::Result;
+use base64::engine::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use time::OffsetDateTime;
+
 use crate::db;
 use crate::model::user::UserId;
-use anyhow::Result;
-use base64::engine::{Engine, general_purpose::STANDARD as BASE64_STANDARD};
-use time::OffsetDateTime;
 
 #[derive(Debug, Clone)]
 pub struct Session {

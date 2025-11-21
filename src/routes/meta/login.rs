@@ -1,14 +1,12 @@
-use crate::AppState;
-use crate::auth;
-use crate::auth::Session;
-use crate::model;
-use crate::routes::AppError;
-use crate::routes::shell;
 use axum::extract::{Form, Query};
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use serde::Deserialize;
+
+use crate::auth::Session;
+use crate::routes::{AppError, shell};
+use crate::{AppState, auth, model};
 
 pub fn routes() -> axum::Router<AppState> {
     axum::Router::new()

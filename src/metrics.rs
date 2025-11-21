@@ -1,11 +1,13 @@
-use super::AppState;
+use std::sync::LazyLock;
+
 use anyhow::Result;
 use axum::response::Response;
 use axum::routing;
-use prometheus::Encoder;
-use prometheus::TextEncoder;
-use prometheus::{self, IntCounter, IntGauge, register_int_counter, register_int_gauge};
-use std::sync::LazyLock;
+use prometheus::{
+    self, Encoder, IntCounter, IntGauge, TextEncoder, register_int_counter, register_int_gauge,
+};
+
+use super::AppState;
 
 macro_rules! metrics {
     ($($t:ident, $name:ident, $desc:expr),*) => {

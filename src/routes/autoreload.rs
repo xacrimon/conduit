@@ -1,7 +1,9 @@
-use crate::AppState;
+use std::sync::LazyLock;
+
 use axum::response::IntoResponse;
 use axum::routing::get;
-use std::sync::LazyLock;
+
+use crate::AppState;
 
 static AUTORELOAD_KEY: LazyLock<u64> = LazyLock::new(rand::random);
 

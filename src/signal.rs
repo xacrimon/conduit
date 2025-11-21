@@ -1,8 +1,7 @@
-use tokio::{
-    select,
-    signal::unix::{SignalKind, signal},
-};
-use tokio_util::{sync::CancellationToken, task::TaskTracker};
+use tokio::select;
+use tokio::signal::unix::{SignalKind, signal};
+use tokio_util::sync::CancellationToken;
+use tokio_util::task::TaskTracker;
 
 async fn stop_signal() {
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
