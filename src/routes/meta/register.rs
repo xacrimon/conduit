@@ -16,10 +16,10 @@ pub fn routes() -> axum::Router<AppState> {
 async fn page_register(session: Option<Session>) -> maud::Markup {
     let markup = maud::html! {
         form method="post" {
-            label for="username" { "Username:" }
+            label for="username" { "Username" }
             input type="text" name="username" required;
 
-            label for="password" { "Password:" }
+            label for="password" { "Password" }
             input type="password" name="password" required;
 
             input type="submit" value="Register";

@@ -19,8 +19,10 @@ pub fn document<S: Into<Option<Session>>>(
             }
 
             body {
-                (header(&session))
-                main .container .m-auto .px-50 .m-auto { (markup) }
+                div .container .m-auto .2xl:px-50 .xl:px-20 .lg:px-12 .md:px-4 .sm:px-2 {
+                    (header(&session))
+                    main { (markup) }
+                }
             }
         }
     }
@@ -40,7 +42,7 @@ fn scripts() -> maud::Markup {
 
 fn header(session: &Option<Session>) -> maud::Markup {
     maud::html! {
-        nav .container .m-auto .px-50 .mb-4 .flex .justify-between {
+        nav .mb-4 .flex .justify-between {
             span {
                 a .hover:underline href="/" { "conduit" }
             }
