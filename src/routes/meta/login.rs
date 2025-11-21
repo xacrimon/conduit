@@ -3,7 +3,7 @@ use crate::auth;
 use crate::auth::Session;
 use crate::model;
 use crate::routes::AppError;
-use crate::routes::document;
+use crate::routes::shell;
 use axum::extract::{Form, Query};
 use axum::response::Redirect;
 use axum::routing::{get, post};
@@ -29,7 +29,7 @@ async fn page_login(session: Option<Session>) -> maud::Markup {
         }
     };
 
-    document(markup, "log in", session)
+    shell::document(markup, "log in", session)
 }
 
 #[derive(Deserialize)]

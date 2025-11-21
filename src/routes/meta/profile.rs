@@ -1,6 +1,6 @@
 use crate::AppState;
 use crate::auth::Session;
-use crate::routes::document;
+use crate::routes::shell;
 use axum::routing::get;
 
 pub fn routes() -> axum::Router<AppState> {
@@ -12,5 +12,5 @@ async fn page_profile(session: Session) -> maud::Markup {
         (super::meta_nav())
     };
 
-    document(markup, "profile", session)
+    shell::document(markup, "profile", session)
 }

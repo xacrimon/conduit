@@ -1,6 +1,6 @@
 use crate::AppState;
 use crate::auth::Session;
-use crate::routes::document;
+use crate::routes::shell;
 use axum::routing::get;
 
 pub fn routes() -> axum::Router<AppState> {
@@ -9,5 +9,5 @@ pub fn routes() -> axum::Router<AppState> {
 
 async fn page_paste(session: Option<Session>) -> maud::Markup {
     let markup = maud::html! {};
-    document(markup, "paste", session)
+    shell::document(markup, "paste", session)
 }

@@ -39,10 +39,15 @@
     display: flex;
     list-style: none;
     gap: 1rem;
+    padding-left: 0;
 }
 
 .navbar-expand {
     flex-grow: 1;
 }
+
+.nav-top {
+    padding-left: 2rem;
+} 
 
 .navbar-right {}
