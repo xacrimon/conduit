@@ -35,11 +35,14 @@
     justify-content: space-between;
 }
 
-.navbar-nav {
-    flex-grow: 1;
+.nav {
     display: flex;
     list-style: none;
     gap: 1rem;
+}
+
+.navbar-expand {
+    flex-grow: 1;
 }
 
 .navbar-right {}

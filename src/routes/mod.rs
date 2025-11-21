@@ -67,7 +67,7 @@ fn header(session: &Option<Session>) -> maud::Markup {
                 a href="/" { "conduit" }
             }
             @if let Some(session) = session {
-                ul .navbar-nav {
+                ul .nav .navbar-expand {
                     li { a href="/paste" { "paste" } }
                     li { a href="/meta" { "meta" } }
                 }

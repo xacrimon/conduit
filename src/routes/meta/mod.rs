@@ -1,3 +1,4 @@
+mod keys;
 mod login;
 mod logout;
 mod profile;
@@ -7,7 +8,6 @@ use axum::response::Redirect;
 use axum::routing::get;
 
 use crate::AppState;
-use crate::auth::Session;
 
 pub fn routes() -> axum::Router<AppState> {
     axum::Router::new()
@@ -15,15 +15,21 @@ pub fn routes() -> axum::Router<AppState> {
         .merge(logout::routes())
         .merge(register::routes())
         .merge(profile::routes())
+        .merge(keys::routes())
         .route("/meta", get(meta_redirect))
 }
 
-fn document<S: Into<Option<Session>>>(
-    markup: maud::Markup,
-    title: &str,
-    session: S,
-) -> maud::Markup {
-    super::document(markup, title, session)
+fn meta_nav() -> maud::Markup {
+    maud::html! {
+        div .container {
+            div {
+                ul .nav {
+                    li { a href="/meta/profile" { "profile" } }
+                    li { a href="/meta/keys" { "keys" } }
+                }
+            }
+        }
+    }
 }
 
 async fn meta_redirect() -> Redirect {

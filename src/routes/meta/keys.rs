@@ -4,13 +4,13 @@ use crate::routes::document;
 use axum::routing::get;
 
 pub fn routes() -> axum::Router<AppState> {
-    axum::Router::new().route("/meta/profile", get(page_profile))
+    axum::Router::new().route("/meta/keys", get(page_keys))
 }
 
-async fn page_profile(session: Session) -> maud::Markup {
+async fn page_keys(session: Session) -> maud::Markup {
     let markup = maud::html! {
         (super::meta_nav())
     };
 
-    document(markup, "profile", session)
+    document(markup, "keys", session)
 }
