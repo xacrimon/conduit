@@ -5,8 +5,25 @@ pub fn document<S: Into<Option<Session>>>(
     title: &str,
     session: S,
 ) -> maud::Markup {
-    let session = session.into();
+    document_with(markup, title, session, maud::html! {})
+}
 
+pub fn document_with<S: Into<Option<Session>>>(
+    markup: maud::Markup,
+    title: &str,
+    session: S,
+    extra: maud::Markup,
+) -> maud::Markup {
+    let session = session.into();
+    document_impl(markup, title, session, extra)
+}
+
+fn document_impl(
+    markup: maud::Markup,
+    title: &str,
+    session: Option<Session>,
+    extra: maud::Markup,
+) -> maud::Markup {
     maud::html! {
         (maud::DOCTYPE)
         html lang="en" {
@@ -15,6 +32,7 @@ pub fn document<S: Into<Option<Session>>>(
                 meta name="viewport" content="width=device-width, initial-scale=1.0";
                 link rel="stylesheet" href="/assets/index.css";
                 (scripts())
+                (extra)
                 title { (title) " - conduit" }
             }
 

@@ -11,12 +11,11 @@ pub fn routes() -> Router<AppState> {
 
 async fn page_paste(session: Option<Session>) -> maud::Markup {
     let markup = maud::html! {
-        (ace_script())
         div #editor .relative .w-100 .h-100 { }
         (ace_enable("editor"))
     };
 
-    shell::document(markup, "paste", session)
+    shell::document_with(markup, "paste", session, ace_script())
 }
 
 fn ace_script() -> maud::Markup {
