@@ -17,8 +17,7 @@ pub struct User {
 
 pub async fn create(username: &str, password: &str) -> Result<()> {
     let db = db::get().await?;
-    let password_hash_bytes = Sha256::digest(password.as_bytes());
-    let password_hash = BASE64_STANDARD.encode(password_hash_bytes);
+    let password_hash = hash_password(password);
 
     sqlx::query!(
         "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
@@ -33,8 +32,7 @@ pub async fn create(username: &str, password: &str) -> Result<()> {
 
 pub async fn login(username: &str, password: &str) -> Result<UserId> {
     let db = db::get().await?;
-    let password_hash_bytes = Sha256::digest(password.as_bytes());
-    let password_hash = BASE64_STANDARD.encode(password_hash_bytes);
+    let password_hash = hash_password(password);
 
     let id = sqlx::query_scalar!(
         "SELECT id FROM users WHERE username = $1 AND password_hash = $2",
@@ -66,4 +64,10 @@ pub async fn get_by_id(user_id: UserId) -> Result<Option<User>> {
     } else {
         Ok(None)
     }
+}
+
+fn hash_password(password: &str) -> String {
+    let password_hash_bytes = Sha256::digest(password.as_bytes());
+    let password_hash = BASE64_STANDARD.encode(password_hash_bytes);
+    password_hash
 }
