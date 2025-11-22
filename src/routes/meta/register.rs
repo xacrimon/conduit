@@ -1,3 +1,4 @@
+use axum::Router;
 use axum::extract::Form;
 use axum::response::Redirect;
 use axum::routing::{get, post};
@@ -7,8 +8,8 @@ use crate::auth::Session;
 use crate::routes::{AppError, shell};
 use crate::{AppState, model};
 
-pub fn routes() -> axum::Router<AppState> {
-    axum::Router::new()
+pub fn routes() -> Router<AppState> {
+    Router::new()
         .route("/register", get(page_register))
         .route("/register", post(do_register))
 }

@@ -6,7 +6,7 @@ mod routes;
 mod signal;
 
 use anyhow::Result;
-use axum::middleware;
+use axum::{Router, middleware};
 use tower::ServiceBuilder;
 use tracing::{error, info};
 
@@ -30,7 +30,7 @@ pub async fn main() -> Result<()> {
     let app_state = AppState {};
     let middleware = ServiceBuilder::new().layer(middleware::from_fn(auth::middleware));
 
-    let app = axum::Router::new()
+    let app = Router::new()
         .merge(routes::routes())
         .merge(metrics::routes())
         .layer(middleware)

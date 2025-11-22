@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 use anyhow::Result;
 use axum::response::Response;
-use axum::routing;
+use axum::{Router, routing};
 use prometheus::{
     self, Encoder, IntCounter, IntGauge, TextEncoder, register_int_counter, register_int_gauge,
 };
@@ -42,8 +42,8 @@ pub fn get() -> &'static Metrics {
     &METRICS
 }
 
-pub fn routes() -> axum::Router<AppState> {
-    axum::Router::new().route("/metrics", routing::get(handler))
+pub fn routes() -> Router<AppState> {
+    Router::new().route("/metrics", routing::get(handler))
 }
 
 async fn handler() -> Response {

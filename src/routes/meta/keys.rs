@@ -1,11 +1,12 @@
+use axum::Router;
 use axum::routing::get;
 
 use crate::AppState;
 use crate::auth::Session;
 use crate::routes::shell;
 
-pub fn routes() -> axum::Router<AppState> {
-    axum::Router::new().route("/meta/keys", get(page_keys))
+pub fn routes() -> Router<AppState> {
+    Router::new().route("/meta/keys", get(page_keys))
 }
 
 async fn page_keys(session: Session) -> maud::Markup {

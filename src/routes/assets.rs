@@ -1,3 +1,4 @@
+use axum::Router;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::IntoResponse;
 use axum::routing::get;
@@ -7,8 +8,8 @@ use crate::AppState;
 
 const CSS: &str = include_str!(concat!(env!("OUT_DIR"), "/index.css"));
 
-pub fn routes() -> axum::Router<AppState> {
-    axum::Router::new()
+pub fn routes() -> Router<AppState> {
+    Router::new()
         .route_service("/favicon.ico", ServeFile::new("public/favicon.ico"))
         .route("/assets/index.css", get(handle_css))
         .nest_service("/assets", ServeDir::new("public/assets"))

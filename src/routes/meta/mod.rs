@@ -4,13 +4,14 @@ mod logout;
 mod profile;
 mod register;
 
+use axum::Router;
 use axum::response::Redirect;
 use axum::routing::get;
 
 use crate::AppState;
 
-pub fn routes() -> axum::Router<AppState> {
-    axum::Router::new()
+pub fn routes() -> Router<AppState> {
+    Router::new()
         .merge(login::routes())
         .merge(logout::routes())
         .merge(register::routes())
