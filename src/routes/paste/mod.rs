@@ -31,11 +31,14 @@ fn ace_script() -> maud::Markup {
 }
 
 fn ace_enable(id: &str) -> maud::Markup {
-    let js = format!(r#"
-        addEventListener("DOMContentLoaded", (_) => {{
-            var editor = ace.edit("{}");
-        }})
-    "#, id);
+    let js = format!(
+        r#"
+            addEventListener("DOMContentLoaded", (_) => {{
+                var editor = ace.edit("{}");
+            }})
+        "#,
+        id
+    );
 
     maud::html! {
         script { (maud::PreEscaped(js)) }
