@@ -9,6 +9,7 @@ mod utils;
 
 use anyhow::Result;
 use axum::{Router, middleware};
+use config::Config;
 use tower::ServiceBuilder;
 use tracing::{error, info};
 
@@ -33,6 +34,7 @@ async fn run() -> Result<()> {
         .try_init()
         .unwrap();
 
+    let config = Config::load(None).await?;
     let (ct, tt) = signal::bind();
     db::get().await?;
     metrics::get();

@@ -1,3 +1,4 @@
 /target
 /conduit.toml
 /.env
+/config.toml
