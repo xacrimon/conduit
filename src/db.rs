@@ -25,7 +25,7 @@ pub async fn get() -> Result<&'static PgPool> {
 fn pool_options() -> PgPoolOptions {
     PgPoolOptions::new()
         .max_connections(8)
-        .min_connections(4)
+        .min_connections(2)
         .acquire_slow_level(LevelFilter::Warn)
         .acquire_slow_threshold(Duration::from_millis(250))
         .acquire_timeout(Duration::from_secs(5))
