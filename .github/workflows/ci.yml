@@ -1,0 +1,13 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+    - name: style
+      run: cargo fmt -- --check
+    - name: clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
