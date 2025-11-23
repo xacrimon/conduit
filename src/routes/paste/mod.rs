@@ -33,13 +33,8 @@ async fn page_paste(session: Session) -> maud::Markup {
 }
 
 fn ace_script() -> maud::Markup {
-    #[cfg(debug_assertions)]
     maud::html! {
         script defer src="/assets/ace/ace.js" {}
-    }
-    #[cfg(not(debug_assertions))]
-    maud::html! {
-        script defer src="/assets/ace-min/ace.js" {}
     }
 }
 

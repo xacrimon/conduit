@@ -6,7 +6,7 @@ use futures::FutureExt;
 use futures::future::BoxFuture;
 use log::LevelFilter;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{Connection, Executor, PgPool, Postgres, Transaction};
+use sqlx::{Connection, Executor, PgPool, PgTransaction};
 use tokio::sync::OnceCell;
 use tokio::time;
 
@@ -42,7 +42,7 @@ fn pool_options() -> PgPoolOptions {
 
 pub async fn transaction<A, T, F>(args: A, mut callback: F) -> Result<T>
 where
-    for<'c> F: FnMut(&'c mut Transaction<'_, Postgres>, &'c A) -> BoxFuture<'c, Result<T>>,
+    for<'c> F: FnMut(&'c mut PgTransaction<'_>, &'c A) -> BoxFuture<'c, Result<T>>,
 {
     let mut backoff = Backoff::new();
 

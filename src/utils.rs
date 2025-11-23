@@ -1,10 +1,10 @@
 use base64::Engine as _;
 use base64::engine::general_purpose;
 use rand::RngCore;
-use sqlx::{Postgres, Transaction};
+use sqlx::PgTransaction;
 
 pub async fn unique_string(
-    txn: &mut Transaction<'_, Postgres>,
+    txn: &mut PgTransaction<'_>,
     table: &str,
     column: &str,
     bytes: usize,

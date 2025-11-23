@@ -47,14 +47,11 @@ fn document_impl(
 }
 
 fn scripts() -> maud::Markup {
-    #[cfg(debug_assertions)]
     maud::html! {
         script src="/assets/htmx-2.0.8.js" {}
-        script src="/assets/autoreload.js" {}
-    }
-    #[cfg(not(debug_assertions))]
-    maud::html! {
-        script src="/assets/htmx-2.0.8.min.js" {}
+        @if cfg!(debug_assertions) {
+            script src="/assets/autoreload.js" {}
+        }
     }
 }
 
