@@ -5,6 +5,7 @@ use axum::response::{Redirect, Response};
 use axum_extra::extract::cookie::CookieJar;
 use url::form_urlencoded;
 
+use crate::model::user::UserId;
 use crate::routes::AppError;
 use crate::{AppState, model};
 
@@ -12,6 +13,7 @@ pub const COOKIE_NAME: &str = "conduit_session";
 
 #[derive(Debug, Clone)]
 pub struct Session {
+    pub id: UserId,
     pub username: String,
 }
 
@@ -58,6 +60,7 @@ pub async fn middleware(
         {
             let user = model::user::get_by_id(session.user_id).await?.unwrap();
             let auth_session = Session {
+                id: user.id,
                 username: user.username,
             };
 

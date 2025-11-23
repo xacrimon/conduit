@@ -19,13 +19,10 @@ fn main() {
     let mut args = vec!["-i", "styles/index.css", "-o", &css_path_str];
 
     if optimize {
-       args.push("-m");
+        args.push("-m");
     }
 
-    Command::new("tailwindcss")
-        .args(&args)
-        .status()
-        .unwrap();
+    Command::new("tailwindcss").args(&args).status().unwrap();
 
     println!("cargo:rerun-if-changed=.git/HEAD");
     println!("cargo:rerun-if-changed=build.rs");

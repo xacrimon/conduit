@@ -1,6 +1,8 @@
 use anyhow::Result;
 use futures::FutureExt;
 
+use crate::model::user;
+use crate::model::user::UserId;
 use crate::{db, utils};
 
 pub struct Paste {
@@ -21,6 +23,7 @@ pub struct File {
 }
 
 pub async fn create_paste(
+    user_id: UserId,
     visibility: Visibility,
     filename: String,
     content: String,
@@ -38,8 +41,9 @@ pub async fn create_paste(
                 let id = utils::unique_string(txn, "pastes", "id", 4).await;
 
                 sqlx::query!(
-                    "INSERT INTO pastes (id, visibility) VALUES ($1, $2)",
+                    "INSERT INTO pastes (id, user_id, visibility) VALUES ($1, $2, $3)",
                     id,
+                    user_id.0,
                     visibility
                 )
                 .execute(&mut **txn)

@@ -12,6 +12,7 @@ CREATE TABLE sessions (
 
 CREATE TABLE pastes (
     id text primary key,
+    user_id integer not null references users(id),
     visibility text not null check (visibility in ('public', 'unlisted', 'private'))
 );
 

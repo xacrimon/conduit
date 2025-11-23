@@ -68,8 +68,13 @@ async fn do_paste(session: Session, Form(paste): Form<Paste>) -> Result<Redirect
         filename
     };
 
-    let id =
-        model::paste::create_paste(model::paste::Visibility::Public, filename, content).await?;
+    let id = model::paste::create_paste(
+        session.id,
+        model::paste::Visibility::Public,
+        filename,
+        content,
+    )
+    .await?;
 
     let url = format!("/~{}/paste/{}", session.username, id);
     Ok(Redirect::to(&url))
