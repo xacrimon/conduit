@@ -23,7 +23,7 @@ async fn page_paste(session: Session) -> maud::Markup {
             input .border-solid .border-1 type="text" name="filename" placeholder="file name";
             input #content_input type="hidden" name="content";
             div #editor .relative .w-100 .h-100 .border-solid .border-1 { }
-            input type="submit" value="create paste";
+            input .text-neutral-50 .bg-blue-500 .border-neutral-700 .border-solid .border-1 type="submit" value="create paste";
         }
 
         (ace_enable("editor", "content_input"))

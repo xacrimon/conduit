@@ -24,7 +24,7 @@ async fn page_login(session: Option<Session>) -> maud::Markup {
             label for="password" { "Password" }
             input .border-solid .border-1 type="password" name="password" required;
 
-            input type="submit" value="Log in";
+            input .text-neutral-50 .bg-blue-500 .border-neutral-700 .border-solid .border-1 type="submit" value="Log in";
         }
     };
 
