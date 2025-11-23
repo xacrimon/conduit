@@ -1,15 +1,16 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO pastes (id, visibility) VALUES ($1, $2)",
+  "query": "INSERT INTO pastes (id, user_id, visibility) VALUES ($1, $2, $3)",
   "describe": {
     "columns": [],
     "parameters": {
       "Left": [
         "Text",
+        "Int4",
         "Text"
       ]
     },
     "nullable": []
   },
-  "hash": "2427de2b1ccfa7033d6ddd140af09048b276b8b5427870e0f52dd916e945f19a"
+  "hash": "8c248284986381f6889d8c8ca45ab5449c674587b37598374972ebbc89bbaf7b"
 }
