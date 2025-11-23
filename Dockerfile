@@ -1,4 +1,4 @@
-FROM rust:1.86-bookworm AS builder
+FROM rust:1.90-bookworm AS builder
 
 RUN rustup install nightly-2025-08-01
 RUN rustup default nightly-2025-08-01
