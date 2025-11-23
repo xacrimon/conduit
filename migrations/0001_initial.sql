@@ -11,21 +11,13 @@ CREATE TABLE sessions (
 );
 
 CREATE TABLE pastes (
-    id integer primary key generated always as identity,
-    external_id uuid not null unique,
+    id text primary key,
     visibility text not null check (visibility in ('public', 'unlisted', 'private'))
 );
 
-CREATE TABLE paste_revisions (
-    paste_id integer not null references pastes(id),
-    revision_seq integer not null,
-    revision_id integer not null unique,
-    primary key (paste_id, revision_seq)
-);
-
 CREATE TABLE paste_files (
-    revision_id integer not null references paste_revisions(revision_id),
+    paste_id text not null references pastes(id) on delete cascade,
     filename text not null,
     content text not null,
-    primary key (revision_id, filename)
+    primary key (paste_id, filename)
 );

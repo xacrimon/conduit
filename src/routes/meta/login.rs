@@ -19,10 +19,10 @@ async fn page_login(session: Option<Session>) -> maud::Markup {
     let markup = maud::html! {
         form method="post" {
             label for="username" { "Username" }
-            input type="text" name="username" required;
+            input .border-solid .border-1 type="text" name="username" required;
 
             label for="password" { "Password" }
-            input type="password" name="password" required;
+            input .border-solid .border-1 type="password" name="password" required;
 
             input type="submit" value="Log in";
         }

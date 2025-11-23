@@ -4,6 +4,7 @@ mod metrics;
 mod model;
 mod routes;
 mod signal;
+mod utils;
 
 use anyhow::Result;
 use axum::{Router, middleware};

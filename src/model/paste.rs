@@ -1,0 +1,65 @@
+use anyhow::Result;
+use futures::FutureExt;
+
+use crate::{db, utils};
+
+pub struct Paste {
+    pub id: String,
+    pub visibility: Visibility,
+}
+
+pub enum Visibility {
+    Public,
+    Unlisted,
+    Private,
+}
+
+pub struct File {
+    pub paste_id: i32,
+    pub filename: String,
+    pub content: String,
+}
+
+pub async fn create_paste(
+    visibility: Visibility,
+    filename: String,
+    content: String,
+) -> Result<String> {
+    let visibility = match visibility {
+        Visibility::Public => "public",
+        Visibility::Unlisted => "unlisted",
+        Visibility::Private => "private",
+    };
+
+    let id = db::transaction(
+        (visibility, filename, content),
+        |txn, (visibility, filename, content)| {
+            async move {
+                let id = utils::unique_string(txn, "pastes", "id", 4).await;
+
+                sqlx::query!(
+                    "INSERT INTO pastes (id, visibility) VALUES ($1, $2)",
+                    id,
+                    visibility
+                )
+                .execute(&mut **txn)
+                .await?;
+
+                sqlx::query!(
+                    "INSERT INTO paste_files (paste_id, filename, content) VALUES ($1, $2, $3)",
+                    id,
+                    filename,
+                    content
+                )
+                .execute(&mut **txn)
+                .await?;
+
+                Ok(id)
+            }
+            .boxed()
+        },
+    )
+    .await?;
+
+    Ok(id)
+}

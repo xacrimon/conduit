@@ -1,15 +1,18 @@
+mod view;
+
 use axum::Router;
 use axum::extract::Form;
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use serde::Deserialize;
 
-use crate::AppState;
 use crate::auth::Session;
 use crate::routes::{AppError, shell};
+use crate::{AppState, model};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
+        .merge(view::routes())
         .route("/paste", get(page_paste))
         .route("/paste", post(do_paste))
 }
@@ -17,7 +20,7 @@ pub fn routes() -> Router<AppState> {
 async fn page_paste(session: Session) -> maud::Markup {
     let markup = maud::html! {
         form method="post" {
-            input type="text" name="filename" placeholder="file name";
+            input .border-solid .border-1 type="text" name="filename" placeholder="file name";
             input #content_input type="hidden" name="content";
             div #editor .relative .w-100 .h-100 .border-solid .border-1 { }
             input type="submit" value="create paste";
@@ -44,12 +47,11 @@ fn ace_enable(editor_id: &str, input_id: &str) -> maud::Markup {
     let js = format!(
         r#"
             addEventListener("DOMContentLoaded", (_) => {{
-                let editor = ace.edit("{}");
-                let input = document.getElementById("{}");
+                let editor = ace.edit("{editor_id}");
+                let input = document.getElementById("{input_id}");
                 editor.on("change", () => input.value = editor.getValue());
             }})
         "#,
-        editor_id, input_id,
     );
 
     maud::html! {
@@ -66,10 +68,14 @@ struct Paste {
 async fn do_paste(session: Session, Form(paste): Form<Paste>) -> Result<Redirect, AppError> {
     let Paste { filename, content } = paste;
     let filename = if filename.is_empty() {
-        None
+        "default.txt".to_owned()
     } else {
-        Some(filename)
+        filename
     };
 
-    Ok(Redirect::to("/"))
+    let id =
+        model::paste::create_paste(model::paste::Visibility::Public, filename, content).await?;
+
+    let url = format!("/~{}/paste/{}", session.username, id);
+    Ok(Redirect::to(&url))
 }
