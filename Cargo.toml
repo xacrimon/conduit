@@ -27,11 +27,3 @@ dotenvy = "0.15.7"
 sha2 = "0.10.9"
 base64 = "0.22.1"
 url = "2.5.7"
-
-[profile.dev]
-debug = "line-tables-only"
-
-[profile.release]
-opt-level = "z"
-lto = "thin"
-codegen-units = 1

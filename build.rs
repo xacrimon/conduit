@@ -15,8 +15,15 @@ fn main() {
     let css_path = PathBuf::from(&out_dir).join("index.css");
     let css_path_str = css_path.to_str().unwrap();
 
+    let optimize = env::var("PROFILE").map(|p| p == "release").unwrap_or(false);
+    let mut args = vec!["-i", "styles/index.css", "-o", &css_path_str];
+
+    if optimize {
+       args.push("-m");
+    }
+
     Command::new("tailwindcss")
-        .args(&["-i", "styles/index.css", "-o", &css_path_str])
+        .args(&args)
         .status()
         .unwrap();
 
