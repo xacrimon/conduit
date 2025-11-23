@@ -15,10 +15,18 @@ use tracing::{error, info};
 const ADDR: &str = "0.0.0.0:8080";
 
 #[derive(Clone)]
-pub struct AppState {}
+struct AppState {}
 
-#[tokio::main(flavor = "current_thread")]
-pub async fn main() -> Result<()> {
+fn main() -> Result<()> {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .max_blocking_threads(8)
+        .build()
+        .unwrap()
+        .block_on(run())
+}
+
+async fn run() -> Result<()> {
     dotenvy::dotenv().ok();
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
