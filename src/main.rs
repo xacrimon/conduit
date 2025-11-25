@@ -49,7 +49,7 @@ async fn run() -> Result<()> {
         .with_state(app_state);
 
     {
-        let signal = ct.cancelled_owned();
+        let signal = ct.clone().cancelled_owned();
         let addr = format!("{}:{}", config.http.host, config.http.port);
 
         tt.spawn(async move {
@@ -60,6 +60,23 @@ async fn run() -> Result<()> {
                 .await
             {
                 error!("http server worker error: {}", err);
+            }
+        });
+    }
+
+    {
+        let ct = ct.clone();
+        let addr = format!("{}:{}", config.ssh.host, config.ssh.port);
+        
+        tt.spawn(async move {
+            let mut listener = libssh::Listener::bind(&addr);
+            info!("ssh server worker starting on {}", addr);
+
+            loop {
+                tokio::select! {
+                    _ = ct.cancelled() => break,
+                    _ = listener.accept() => {},
+                }
             }
         });
     }
