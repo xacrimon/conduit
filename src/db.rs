@@ -95,11 +95,11 @@ impl Backoff {
     async fn wait(&mut self) -> bool {
         self.tries += 1;
 
-        if self.tries >= 5 {
+        let steps = [10, 30, 90, 270, 810];
+        if self.tries > steps.len() {
             return false;
         }
 
-        let steps = [10, 30, 90, 270, 810];
         let dur = Duration::from_millis(steps[self.tries - 1]);
         time::sleep(dur).await;
 

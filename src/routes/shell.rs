@@ -70,7 +70,7 @@ fn header(session: &Option<Session>) -> maud::Markup {
                 div {
                     span {
                         "Logged in as "
-                        a .underline href={"/~" (session.username)} { (session.username) }
+                        a .underline href={ "/~" (session.username)} { (session.username) }
                         " - "
                         a .underline href="/logout" { "Log out" }
                     }
