@@ -5,7 +5,6 @@ mod metrics;
 mod model;
 mod routes;
 mod signal;
-mod ssh;
 mod utils;
 
 use anyhow::Result;

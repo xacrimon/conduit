@@ -28,4 +28,4 @@ sha2 = "0.10.9"
 base64 = "0.22.1"
 url = "2.5.7"
 toml = { version = "0.9.8", default-features = false, features = ["parse", "serde"] }
-aws-lc-rs = { version = "=1.14.1", default-features = false, features = ["aws-lc-sys"] }
+libssh-rs-sys = "0.2.6"
