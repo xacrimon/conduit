@@ -6,6 +6,7 @@ mod model;
 mod routes;
 mod signal;
 mod utils;
+mod libssh;
 
 use anyhow::Result;
 use axum::{Router, middleware};
@@ -32,6 +33,7 @@ async fn run() -> Result<()> {
         .try_init()
         .unwrap();
 
+    libssh::init();
     let config = Config::load(None).await?;
     let (ct, tt) = signal::bind();
     db::get().await?;
@@ -63,5 +65,6 @@ async fn run() -> Result<()> {
     }
 
     tt.wait().await;
+    libssh::finalize();
     Ok(())
 }

@@ -28,4 +28,4 @@ sha2 = "0.10.9"
 base64 = "0.22.1"
 url = "2.5.7"
 toml = { version = "0.9.8", default-features = false, features = ["parse", "serde"] }
-libssh-rs-sys = "0.2.6"
+libssh-rs-sys = { version = "0.2.6", features = ["vendored"] }
