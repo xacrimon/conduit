@@ -13,8 +13,6 @@ use config::Config;
 use tower::ServiceBuilder;
 use tracing::{error, info};
 
-const ADDR: &str = "0.0.0.0:8080";
-
 #[derive(Clone)]
 struct AppState {}
 
@@ -50,9 +48,11 @@ async fn run() -> Result<()> {
 
     {
         let signal = ct.cancelled_owned();
+        let addr = format!("{}:{}", config.http.host, config.http.port);
+
         tt.spawn(async move {
-            let listener = tokio::net::TcpListener::bind(ADDR).await.unwrap();
-            info!("http server worker starting on {}", ADDR);
+            let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+            info!("http server worker starting on {}", addr);
             if let Err(err) = axum::serve(listener, app)
                 .with_graceful_shutdown(signal)
                 .await

@@ -8,6 +8,8 @@ use tokio::fs;
 #[derive(Deserialize)]
 pub struct Config {
     pub database: Database,
+    pub http: Http,
+    pub ssh: Ssh,
 }
 
 impl Config {
@@ -52,4 +54,16 @@ pub struct Database {
     pub user: String,
     pub password: String,
     pub database: String,
+}
+
+#[derive(Deserialize)]
+pub struct Http {
+    pub host: String,
+    pub port: u16,
+}
+
+#[derive(Deserialize)]
+pub struct Ssh {
+    pub host: String,
+    pub port: u16,
 }
