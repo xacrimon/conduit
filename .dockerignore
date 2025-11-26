@@ -2,3 +2,4 @@
 /conduit.toml
 /.env
 /config.toml
+/data
