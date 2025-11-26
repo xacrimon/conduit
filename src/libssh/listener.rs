@@ -1,11 +1,8 @@
 use std::ffi::{CStr, CString};
+use std::mem;
 use std::os::fd::{AsRawFd, OwnedFd};
-use std::os::unix::io::RawFd;
-use std::{io, mem};
 
 use libssh_rs_sys::{self as libssh};
-use tokio::io::Interest;
-use tokio::io::unix::AsyncFd;
 use tokio::net::TcpListener;
 
 use super::Session;

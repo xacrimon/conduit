@@ -77,12 +77,12 @@ async fn run() -> Result<()> {
             loop {
                 tokio::select! {
                     _ = ct.cancelled() => break,
-                    session = listener.accept() => {
+                    mut session = listener.accept() => {
                         tokio::spawn(async move {
-                            let session = session;
+                            info!("accepted ssh connection");
+                            session.configure();
                             session.handle_key_exchange().await;
                         });
-                        info!("accepted ssh connection");
                     },
                 }
             }

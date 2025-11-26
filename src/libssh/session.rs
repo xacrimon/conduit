@@ -16,12 +16,6 @@ impl Handle {
         let handle = Self { session };
         Box::pin(handle)
     }
-
-    fn configure(self: &mut Pin<Box<Self>>) {
-        unsafe {
-            libssh::ssh_set_auth_methods(self.session, libssh::SSH_AUTH_METHOD_NONE as i32);
-        }
-    }
 }
 
 impl AsRawFd for Pin<Box<Handle>> {
@@ -54,7 +48,15 @@ impl Session {
         }
     }
 
-    pub async fn handle_key_exchange(self) {
+    pub fn configure(&mut self) {
+        let handle = self.handle.get_mut();
+
+        unsafe {
+            libssh::ssh_set_auth_methods(handle.session, libssh::SSH_AUTH_METHOD_NONE as i32);
+        }
+    }
+
+    pub async fn handle_key_exchange(&mut self) {
         loop {
             let mut guard = self
                 .handle
@@ -70,6 +72,7 @@ impl Session {
                 _ => {
                     let err =
                         unsafe { CStr::from_ptr(libssh::ssh_get_error(handle.session as *mut _)) };
+
                     panic!("key exchange failed: {}", err.to_string_lossy());
                 }
             }

@@ -2,17 +2,12 @@ mod error;
 mod listener;
 mod session;
 
-use std::ffi::{CStr, CString};
-use std::os::fd::AsRawFd;
-use std::os::unix::io::RawFd;
 use std::sync::Once;
 
 pub use error::Error;
 use libssh_rs_sys::{self as libssh};
 pub use listener::Listener;
 pub use session::Session;
-use tokio::io::Interest;
-use tokio::io::unix::AsyncFd;
 
 static LIBSSH_INIT: Once = Once::new();
 static LIBSSH_FINALIZE: Once = Once::new();
