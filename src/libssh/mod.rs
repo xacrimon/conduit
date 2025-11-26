@@ -26,6 +26,7 @@ pub fn finalize() {
         LIBSSH_INIT.is_completed(),
         "libssh must be initialized before finalizing"
     );
+
     LIBSSH_FINALIZE.call_once(|| unsafe {
         libssh::ssh_finalize();
     });

@@ -10,7 +10,7 @@ tokio-util = { version = "0.7.17", features = ["rt"] }
 axum = { version = "0.8.7", default-features = false, features = ["http1", "tokio", "form", "query"] }
 axum-extra = { version = "0.12.2", features = ["cookie"] }
 tower = "0.5.2"
-tower-http = { version = "0.6.6", features = ["fs"] }
+tower-http = { version = "0.6.7", features = ["fs"] }
 maud = { version = "0.27.0", features = ["axum"] }
 futures = "0.3.31"
 serde = { version = "1.0.228", features = ["derive"] }
