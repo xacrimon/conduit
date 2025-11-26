@@ -1,34 +1,26 @@
-use libssh_rs_sys::{self as libssh};
-use tokio::net::TcpListener;
-use std::os::fd::AsRawFd;
-use std::ffi::{CString, CStr};
-use tokio::io::unix::AsyncFd;
+use std::ffi::{CStr, CString};
+use std::os::fd::{AsRawFd, OwnedFd};
 use std::os::unix::io::RawFd;
-use std::os::fd::OwnedFd;
-use tokio::io::Interest;
-use super::Session;
 use std::{io, mem};
 
-const HOST_KEY: &str = r#"
------BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACBGAQ7+vwHah7hlZRoY7+8G9vfbtp8slX6YbQLVQSw0TQAAAKDY5qT42Oak
-+AAAAAtzc2gtZWQyNTUxOQAAACBGAQ7+vwHah7hlZRoY7+8G9vfbtp8slX6YbQLVQSw0TQ
-AAAEB+9L+sh9tW/nVDfax4IOLA2vjyPQiRWispg16gt7yeVEYBDv6/AdqHuGVlGhjv7wb2
-99u2nyyVfphtAtVBLDRNAAAAGGpvZWx3ZWpkZW5zdGFsQE1hYy52YWxsYQECAwQF
------END OPENSSH PRIVATE KEY-----
-"#;
+use libssh_rs_sys::{self as libssh};
+use tokio::io::Interest;
+use tokio::io::unix::AsyncFd;
+use tokio::net::TcpListener;
+
+use super::Session;
 
 pub struct Listener {
     bind: libssh::ssh_bind,
-    listener: TcpListener
+    listener: TcpListener,
 }
 
 impl Listener {
-    pub async fn bind(addr: &str, port: u16) -> Self {
+    pub async fn bind(host_key: &str, addr: &str, port: u16) -> Self {
         let listener = TcpListener::bind((addr, port)).await.unwrap();
-        let bind = unsafe { libssh::ssh_bind_new()};
-        let c_key = CString::new(HOST_KEY).unwrap();
+        let bind = unsafe { libssh::ssh_bind_new() };
+        let c_key = CString::new(host_key).unwrap();
+        let c_banner = CString::new("conduit").unwrap();
 
         unsafe {
             let rc = libssh::ssh_bind_options_set(
@@ -39,6 +31,16 @@ impl Listener {
             if rc != libssh::SSH_OK as i32 {
                 let err = CStr::from_ptr(libssh::ssh_get_error(bind as *mut _));
                 panic!("failed to set host key: {}", err.to_string_lossy());
+            }
+
+            let rc = libssh::ssh_bind_options_set(
+                bind,
+                libssh::ssh_bind_options_e::SSH_BIND_OPTIONS_BANNER,
+                c_banner.into_raw() as *const std::os::raw::c_void,
+            );
+            if rc != libssh::SSH_OK as i32 {
+                let err = CStr::from_ptr(libssh::ssh_get_error(bind as *mut _));
+                panic!("failed to set banner: {}", err.to_string_lossy());
             }
         }
 
@@ -57,7 +59,7 @@ impl Listener {
     pub async fn accept(&mut self) -> Session {
         let (socket, _) = self.listener.accept().await.unwrap();
         let fd = OwnedFd::from(socket.into_std().unwrap());
-    
+
         unsafe {
             let session = libssh::ssh_new();
             let rc = libssh::ssh_bind_accept_fd(self.bind, session, fd.as_raw_fd());

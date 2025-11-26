@@ -1,18 +1,18 @@
+mod error;
 mod listener;
 mod session;
-mod error;
 
+use std::ffi::{CStr, CString};
+use std::os::fd::AsRawFd;
+use std::os::unix::io::RawFd;
+use std::sync::Once;
+
+pub use error::Error;
+use libssh_rs_sys::{self as libssh};
 pub use listener::Listener;
 pub use session::Session;
-pub use error::Error;
-
-use libssh_rs_sys::{self as libssh};
-use std::os::fd::AsRawFd;
-use std::sync::Once;
-use std::ffi::{CString, CStr};
-use tokio::io::unix::AsyncFd;
-use std::os::unix::io::RawFd;
 use tokio::io::Interest;
+use tokio::io::unix::AsyncFd;
 
 static LIBSSH_INIT: Once = Once::new();
 static LIBSSH_FINALIZE: Once = Once::new();
@@ -27,7 +27,10 @@ pub fn init() {
 }
 
 pub fn finalize() {
-    assert!(LIBSSH_INIT.is_completed(), "libssh must be initialized before finalizing");
+    assert!(
+        LIBSSH_INIT.is_completed(),
+        "libssh must be initialized before finalizing"
+    );
     LIBSSH_FINALIZE.call_once(|| unsafe {
         libssh::ssh_finalize();
     });

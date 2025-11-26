@@ -1,11 +1,11 @@
-use libssh_rs_sys::{self as libssh};
+use std::ffi::{CStr, CString};
 use std::os::fd::AsRawFd;
-use std::pin::Pin;
-use std::sync::Once;
-use std::ffi::{CString, CStr};
-use tokio::io::unix::AsyncFd;
 use std::os::unix::io::RawFd;
+use std::pin::Pin;
+
+use libssh_rs_sys::{self as libssh};
 use tokio::io::Interest;
+use tokio::io::unix::AsyncFd;
 
 struct Handle {
     session: libssh::ssh_session,
@@ -15,6 +15,12 @@ impl Handle {
     fn new(session: libssh::ssh_session) -> Pin<Box<Self>> {
         let handle = Self { session };
         Box::pin(handle)
+    }
+
+    fn configure(self: &mut Pin<Box<Self>>) {
+        unsafe {
+            libssh::ssh_set_auth_methods(self.session, libssh::SSH_AUTH_METHOD_NONE as i32);
+        }
     }
 }
 
@@ -43,23 +49,29 @@ pub struct Session {
 impl Session {
     pub(super) fn new(session: libssh::ssh_session) -> Self {
         let handle = Handle::new(session);
-        Self { handle: AsyncFd::new(handle).unwrap() }
+        Self {
+            handle: AsyncFd::new(handle).unwrap(),
+        }
     }
 
     pub async fn handle_key_exchange(self) {
         loop {
-            let guard = self.handle.ready(Interest::READABLE | Interest::WRITABLE).await.unwrap();
+            let mut guard = self
+                .handle
+                .ready(Interest::READABLE | Interest::WRITABLE)
+                .await
+                .unwrap();
+
             let handle = guard.get_inner();
 
             match unsafe { libssh::ssh_handle_key_exchange(handle.session) } {
-                rc if rc == libssh::SSH_AGAIN as i32 => continue,
-                rc if rc == libssh::SSH_OK as i32 => {
-                    break;
-                },
+                rc if rc == libssh::SSH_AGAIN as i32 => guard.clear_ready(),
+                rc if rc == libssh::SSH_OK as i32 => break,
                 _ => {
-                    let err = unsafe {CStr::from_ptr(libssh::ssh_get_error(handle.session as *mut _))};
+                    let err =
+                        unsafe { CStr::from_ptr(libssh::ssh_get_error(handle.session as *mut _)) };
                     panic!("key exchange failed: {}", err.to_string_lossy());
-                },
+                }
             }
         }
     }

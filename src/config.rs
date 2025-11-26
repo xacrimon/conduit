@@ -66,4 +66,5 @@ pub struct Http {
 pub struct Ssh {
     pub host: String,
     pub port: u16,
+    pub host_key: PathBuf,
 }

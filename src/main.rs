@@ -1,16 +1,17 @@
 mod auth;
 mod config;
 mod db;
+mod libssh;
 mod metrics;
 mod model;
 mod routes;
 mod signal;
 mod utils;
-mod libssh;
 
 use anyhow::Result;
 use axum::{Router, middleware};
 use config::Config;
+use tokio::fs;
 use tower::ServiceBuilder;
 use tracing::{error, info};
 
@@ -67,9 +68,10 @@ async fn run() -> Result<()> {
     {
         let ct = ct.clone();
         let addr = config.ssh.host.clone();
-        
+
         tt.spawn(async move {
-            let mut listener = libssh::Listener::bind(&addr, config.ssh.port).await;
+            let host_key = fs::read_to_string(config.ssh.host_key).await.unwrap();
+            let mut listener = libssh::Listener::bind(&host_key, &addr, config.ssh.port).await;
             info!("ssh server worker starting on {}", addr);
 
             loop {
