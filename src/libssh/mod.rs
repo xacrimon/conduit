@@ -27,12 +27,8 @@ pub fn init() {
 }
 
 pub fn finalize() {
-    assert_libssh_initialized();
+    assert!(LIBSSH_INIT.is_completed(), "libssh must be initialized before finalizing");
     LIBSSH_FINALIZE.call_once(|| unsafe {
         libssh::ssh_finalize();
     });
-}
-
-fn assert_libssh_initialized() {
-    assert!(LIBSSH_INIT.is_completed(), "libssh is not initialized");
 }

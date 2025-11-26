@@ -66,16 +66,22 @@ async fn run() -> Result<()> {
 
     {
         let ct = ct.clone();
-        let addr = format!("{}:{}", config.ssh.host, config.ssh.port);
+        let addr = config.ssh.host.clone();
         
         tt.spawn(async move {
-            let mut listener = libssh::Listener::bind(&addr);
+            let mut listener = libssh::Listener::bind(&addr, config.ssh.port).await;
             info!("ssh server worker starting on {}", addr);
 
             loop {
                 tokio::select! {
                     _ = ct.cancelled() => break,
-                    _ = listener.accept() => {},
+                    session = listener.accept() => {
+                        tokio::spawn(async move {
+                            let session = session;
+                            session.handle_key_exchange().await;
+                        });
+                        info!("accepted ssh connection");
+                    },
                 }
             }
         });
