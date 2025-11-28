@@ -43,6 +43,7 @@ pub struct Session {
 impl Session {
     pub(super) fn new(session: libssh::ssh_session) -> Self {
         let handle = Handle::new(session);
+
         Self {
             handle: AsyncFd::new(handle).unwrap(),
         }
