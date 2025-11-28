@@ -62,6 +62,7 @@ pub async fn middleware(
             let user = model::user::get_by_id(&state.db, session.user_id)
                 .await?
                 .unwrap();
+
             let auth_session = Session {
                 id: user.id,
                 username: user.username,
