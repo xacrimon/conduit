@@ -1,4 +1,4 @@
-use axum::extract::{FromRequestParts, OptionalFromRequestParts, Request};
+use axum::extract::{FromRequestParts, OptionalFromRequestParts, Request, State};
 use axum::http::request::Parts;
 use axum::middleware::Next;
 use axum::response::{Redirect, Response};
@@ -47,18 +47,21 @@ impl OptionalFromRequestParts<AppState> for Session {
 }
 
 pub async fn middleware(
+    State(state): State<AppState>,
     mut jar: CookieJar,
     mut request: Request,
     next: Next,
 ) -> Result<(CookieJar, Response), AppError> {
     if let Some(cookie) = jar.get(COOKIE_NAME) {
         let token = cookie.value();
-        let maybe_session = model::session::get_by_token(token).await?;
+        let maybe_session = model::session::get_by_token(&state.db, token).await?;
 
         if let Some(session) = maybe_session
             && session.expires > time::OffsetDateTime::now_utc()
         {
-            let user = model::user::get_by_id(session.user_id).await?.unwrap();
+            let user = model::user::get_by_id(&state.db, session.user_id)
+                .await?
+                .unwrap();
             let auth_session = Session {
                 id: user.id,
                 username: user.username,

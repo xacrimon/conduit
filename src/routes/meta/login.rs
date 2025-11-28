@@ -1,5 +1,5 @@
 use axum::Router;
-use axum::extract::{Form, Query};
+use axum::extract::{Form, Query, State};
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
@@ -43,6 +43,7 @@ struct LoginForm {
 }
 
 async fn do_login(
+    State(state): State<AppState>,
     mut jar: CookieJar,
     Query(query): Query<LoginQuery>,
     Form(login): Form<LoginForm>,
@@ -50,8 +51,8 @@ async fn do_login(
     let redirect = query.redirect;
     let LoginForm { username, password } = login;
 
-    let user_id = model::user::login(&username, &password).await?;
-    let session = model::session::create(user_id).await?;
+    let user_id = model::user::login(&state.db, &username, &password).await?;
+    let session = model::session::create(&state.db, user_id).await?;
 
     let cookie = Cookie::build((auth::COOKIE_NAME, session.token))
         .http_only(true)

@@ -11,12 +11,15 @@ mod utils;
 use anyhow::Result;
 use axum::{Router, middleware};
 use config::Config;
+use sqlx::PgPool;
 use tokio::fs;
 use tower::ServiceBuilder;
 use tracing::{error, info};
 
 #[derive(Clone)]
-struct AppState {}
+struct AppState {
+    db: PgPool,
+}
 
 fn main() -> Result<()> {
     tokio::runtime::Builder::new_current_thread()
@@ -37,17 +40,20 @@ async fn run() -> Result<()> {
     libssh::init();
     let config = Config::load(None).await?;
     let (ct, tt) = signal::bind();
-    db::get().await?;
+    let db = db::connect(&config.database).await?;
     metrics::get();
 
-    let app_state = AppState {};
-    let middleware = ServiceBuilder::new().layer(middleware::from_fn(auth::middleware));
+    let state = AppState { db };
+    let middleware = ServiceBuilder::new().layer(middleware::from_fn_with_state(
+        state.clone(),
+        auth::middleware,
+    ));
 
     let app = Router::new()
         .merge(routes::routes())
         .merge(metrics::routes())
         .layer(middleware)
-        .with_state(app_state);
+        .with_state(state);
 
     {
         let signal = ct.clone().cancelled_owned();

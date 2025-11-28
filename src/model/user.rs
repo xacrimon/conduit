@@ -2,6 +2,7 @@ use anyhow::Result;
 use base64::engine::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use sha2::{Digest, Sha256};
+use sqlx::PgPool;
 
 use crate::db;
 
@@ -15,8 +16,7 @@ pub struct User {
     pub password_hash: String,
 }
 
-pub async fn create(username: &str, password: &str) -> Result<()> {
-    let db = db::get().await?;
+pub async fn create(db: &PgPool, username: &str, password: &str) -> Result<()> {
     let password_hash = hash_password(password);
 
     sqlx::query!(
@@ -30,8 +30,7 @@ pub async fn create(username: &str, password: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn login(username: &str, password: &str) -> Result<UserId> {
-    let db = db::get().await?;
+pub async fn login(db: &PgPool, username: &str, password: &str) -> Result<UserId> {
     let password_hash = hash_password(password);
 
     let id = sqlx::query_scalar!(
@@ -45,9 +44,7 @@ pub async fn login(username: &str, password: &str) -> Result<UserId> {
     Ok(UserId(id))
 }
 
-pub async fn get_by_id(user_id: UserId) -> Result<Option<User>> {
-    let db = db::get().await?;
-
+pub async fn get_by_id(db: &PgPool, user_id: UserId) -> Result<Option<User>> {
     let record = sqlx::query!(
         "SELECT id, username, password_hash FROM users WHERE id = $1",
         user_id.0,

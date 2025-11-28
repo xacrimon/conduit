@@ -1,5 +1,5 @@
 use axum::Router;
-use axum::extract::Form;
+use axum::extract::{Form, State};
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use serde::Deserialize;
@@ -36,8 +36,11 @@ struct Register {
     password: String,
 }
 
-async fn do_register(Form(register): Form<Register>) -> Result<Redirect, AppError> {
+async fn do_register(
+    State(state): State<AppState>,
+    Form(register): Form<Register>,
+) -> Result<Redirect, AppError> {
     let Register { username, password } = register;
-    model::user::create(&username, &password).await?;
+    model::user::create(&state.db, &username, &password).await?;
     Ok(Redirect::to("/login"))
 }

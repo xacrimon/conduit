@@ -1,5 +1,6 @@
 use anyhow::Result;
 use futures::FutureExt;
+use sqlx::PgPool;
 
 use crate::model::user;
 use crate::model::user::UserId;
@@ -23,6 +24,7 @@ pub struct File {
 }
 
 pub async fn create_paste(
+    db: &PgPool,
     user_id: UserId,
     visibility: Visibility,
     filename: String,
@@ -35,6 +37,7 @@ pub async fn create_paste(
     };
 
     let id = db::transaction(
+        db,
         (visibility, filename, content),
         |txn, (visibility, filename, content)| {
             async move {

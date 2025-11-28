@@ -1,7 +1,7 @@
 mod view;
 
 use axum::Router;
-use axum::extract::Form;
+use axum::extract::{Form, State};
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use serde::Deserialize;
@@ -60,7 +60,11 @@ struct Paste {
     content: String,
 }
 
-async fn do_paste(session: Session, Form(paste): Form<Paste>) -> Result<Redirect, AppError> {
+async fn do_paste(
+    State(state): State<AppState>,
+    session: Session,
+    Form(paste): Form<Paste>,
+) -> Result<Redirect, AppError> {
     let Paste { filename, content } = paste;
     let filename = if filename.is_empty() {
         "default.txt".to_owned()
@@ -69,6 +73,7 @@ async fn do_paste(session: Session, Form(paste): Form<Paste>) -> Result<Redirect
     };
 
     let id = model::paste::create_paste(
+        &state.db,
         session.id,
         model::paste::Visibility::Public,
         filename,

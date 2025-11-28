@@ -1,29 +1,26 @@
 use std::env;
 use std::time::Duration;
 
-use anyhow::{Error, Result};
+use anyhow::Result;
 use futures::FutureExt;
 use futures::future::BoxFuture;
 use log::LevelFilter;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Connection, Executor, PgPool, PgTransaction};
-use tokio::sync::OnceCell;
 use tokio::time;
 
-pub async fn get() -> Result<&'static PgPool> {
-    static DB: OnceCell<PgPool> = OnceCell::const_new();
+use crate::config;
 
-    DB.get_or_try_init::<Error, _, _>(async || {
-        let url = env::var("DATABASE_URL").unwrap();
-        let pool = pool_options().connect(&url).await?;
-        sqlx::migrate!("./migrations").run(&pool).await?;
-        Ok(pool)
-    })
-    .await
-}
+pub async fn connect(config: &config::Database) -> Result<PgPool> {
+    let url = match env::var("DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => format!(
+            "postgres://{}:{}@{}:{}/{}",
+            config.user, config.password, config.host, config.port, config.database
+        ),
+    };
 
-fn pool_options() -> PgPoolOptions {
-    PgPoolOptions::new()
+    let options = PgPoolOptions::new()
         .max_connections(8)
         .min_connections(2)
         .acquire_slow_level(LevelFilter::Warn)
@@ -37,17 +34,20 @@ fn pool_options() -> PgPoolOptions {
                 Ok(())
             }
             .boxed()
-        })
+        });
+
+    let pool = options.connect(&url).await?;
+    Ok(pool)
 }
 
-pub async fn transaction<A, T, F>(args: A, mut callback: F) -> Result<T>
+pub async fn transaction<A, T, F>(db: &PgPool, args: A, mut callback: F) -> Result<T>
 where
     for<'c> F: FnMut(&'c mut PgTransaction<'_>, &'c A) -> BoxFuture<'c, Result<T>>,
 {
     let mut backoff = Backoff::new();
 
     loop {
-        let mut conn = get().await?.acquire().await?;
+        let mut conn = db.acquire().await?;
         let mut txn = conn.begin().await?;
 
         match callback(&mut txn, &args).await {

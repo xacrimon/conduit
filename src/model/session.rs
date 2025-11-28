@@ -1,6 +1,7 @@
 use anyhow::Result;
 use base64::engine::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use sqlx::PgPool;
 use time::OffsetDateTime;
 
 use crate::db;
@@ -13,8 +14,7 @@ pub struct Session {
     pub expires: OffsetDateTime,
 }
 
-pub async fn create(user_id: UserId) -> Result<Session> {
-    let db = db::get().await?;
+pub async fn create(db: &PgPool, user_id: UserId) -> Result<Session> {
     let buf: [u8; 16] = rand::random();
     let token = BASE64_STANDARD.encode(buf);
     let expires = OffsetDateTime::now_utc() + time::Duration::days(30);
@@ -35,9 +35,7 @@ pub async fn create(user_id: UserId) -> Result<Session> {
     })
 }
 
-pub async fn get_by_token(token: &str) -> Result<Option<Session>> {
-    let db = db::get().await?;
-
+pub async fn get_by_token(db: &PgPool, token: &str) -> Result<Option<Session>> {
     let record = sqlx::query!(
         "SELECT user_id, expires FROM sessions WHERE token = $1",
         token
