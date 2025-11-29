@@ -2,16 +2,7 @@ use tokio::select;
 use tokio::signal::unix::{SignalKind, signal};
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
-
-async fn stop_signal() {
-    let mut sigint = signal(SignalKind::interrupt()).unwrap();
-    let mut sigterm = signal(SignalKind::terminate()).unwrap();
-
-    select! {
-        _ = sigint.recv() => (),
-        _ = sigterm.recv() => (),
-    }
-}
+use tracing::info;
 
 pub fn bind() -> (CancellationToken, TaskTracker) {
     let token = CancellationToken::new();
@@ -19,9 +10,13 @@ pub fn bind() -> (CancellationToken, TaskTracker) {
     let tracker = TaskTracker::new();
     let tracker_clone = tracker.clone();
 
+    let mut sigint = signal(SignalKind::interrupt()).unwrap();
+    let mut sigterm = signal(SignalKind::terminate()).unwrap();
+
     tokio::spawn(async move {
         select! {
-            _ = stop_signal() => (),
+            _ = sigint.recv() => info!("received SIGINT, shutting down"),
+            _ = sigterm.recv() => info!("received SIGTERM, shutting down"),
             _ = token_clone.cancelled() => (),
         }
 
