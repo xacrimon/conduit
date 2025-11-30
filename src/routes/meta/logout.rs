@@ -3,7 +3,8 @@ use axum::response::Redirect;
 use axum::routing::get;
 use axum_extra::extract::CookieJar;
 
-use crate::{AppState, auth};
+use crate::AppState;
+use crate::middleware::auth;
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/logout", get(page_logout))

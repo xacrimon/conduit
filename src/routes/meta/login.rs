@@ -5,9 +5,10 @@ use axum::routing::{get, post};
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use serde::Deserialize;
 
-use crate::auth::Session;
+use crate::middleware::auth;
+use crate::middleware::auth::Session;
 use crate::routes::{AppError, shell};
-use crate::{AppState, auth, model};
+use crate::{AppState, model};
 
 pub fn routes() -> Router<AppState> {
     Router::new()

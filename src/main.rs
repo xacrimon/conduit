@@ -1,15 +1,15 @@
-mod auth;
 mod config;
 mod db;
 mod libssh;
 mod metrics;
+mod middleware;
 mod model;
 mod routes;
 mod signal;
 mod utils;
 
 use anyhow::Result;
-use axum::{Router, middleware};
+use axum::Router;
 use config::Config;
 use sqlx::PgPool;
 use tokio::fs;
@@ -44,10 +44,12 @@ async fn run() -> Result<()> {
     metrics::get();
 
     let state = AppState { db };
-    let middleware = ServiceBuilder::new().layer(middleware::from_fn_with_state(
-        state.clone(),
-        auth::middleware,
-    ));
+    let middleware = ServiceBuilder::new()
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            middleware::auth::middleware,
+        ))
+        .layer(middleware::panic::middleware());
 
     let app = Router::new()
         .merge(routes::routes())

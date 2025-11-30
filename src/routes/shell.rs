@@ -1,4 +1,4 @@
-use crate::auth::Session;
+use crate::middleware::auth::Session;
 
 pub fn document<S: Into<Option<Session>>>(
     markup: maud::Markup,

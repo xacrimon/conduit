@@ -4,7 +4,7 @@ use axum::response::Redirect;
 use axum::routing::{get, post};
 use serde::Deserialize;
 
-use crate::auth::Session;
+use crate::middleware::auth::Session;
 use crate::routes::{AppError, shell};
 use crate::{AppState, model};
 

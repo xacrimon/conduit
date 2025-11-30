@@ -11,7 +11,7 @@ use axum::routing::get;
 pub use error::AppError;
 
 use crate::AppState;
-use crate::auth::Session;
+use crate::middleware::auth::Session;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
