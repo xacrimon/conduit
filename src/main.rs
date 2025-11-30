@@ -74,6 +74,7 @@ async fn run() -> Result<()> {
     {
         let ct = ct.clone();
         let addr = config.ssh.host.clone();
+        let tt_clone = tt.clone();
 
         tt.spawn(async move {
             let host_key = fs::read_to_string(config.ssh.host_key).await.unwrap();
@@ -84,7 +85,7 @@ async fn run() -> Result<()> {
                 tokio::select! {
                     _ = ct.cancelled() => break,
                     mut session = listener.accept() => {
-                        tokio::spawn(async move {
+                        tt_clone.spawn(async move {
                             info!("accepted ssh connection");
                             session.configure();
                             session.handle_key_exchange().await;
