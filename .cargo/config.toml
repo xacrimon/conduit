@@ -9,7 +9,7 @@ inherits = "dev"
 incremental = false
 
 [profile.release]
-opt-level = "z"
+opt-level = "s"
 lto = "thin"
 codegen-units = 1
 
