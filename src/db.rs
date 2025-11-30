@@ -2,8 +2,8 @@ use std::env;
 use std::time::Duration;
 
 use anyhow::Result;
-use futures::FutureExt;
-use futures::future::BoxFuture;
+use futures_util::FutureExt;
+use futures_util::future::BoxFuture;
 use log::LevelFilter;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Connection, Executor, PgPool, PgTransaction};

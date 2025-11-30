@@ -1,5 +1,5 @@
 use anyhow::Result;
-use futures::FutureExt;
+use futures_util::FutureExt;
 use sqlx::PgPool;
 
 use crate::model::user;
