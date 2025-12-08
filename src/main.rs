@@ -14,7 +14,7 @@ use config::Config;
 use sqlx::PgPool;
 use tokio::fs;
 use tower::ServiceBuilder;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 #[derive(Clone)]
 struct AppState {
@@ -92,7 +92,7 @@ async fn run() -> Result<()> {
                         let mut session = session.unwrap();
 
                         tt_clone.spawn(async move {
-                            info!("accepted ssh connection");
+                            debug!("accepted ssh connection");
                             session.configure();
                             session.handle_key_exchange().await.unwrap();
                         });
