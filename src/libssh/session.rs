@@ -185,9 +185,13 @@ impl Channel {
             channel_request_response_function: None,
         };
 
-        let channel = Box::pin(Self {
+        let mut channel = Box::pin(Self {
             callbacks: channel_callbacks,
         });
+
+        unsafe {
+            channel.as_mut().get_unchecked_mut().callbacks.userdata = &*channel as *const _ as _;
+        }
 
         channel
     }
