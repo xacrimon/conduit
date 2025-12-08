@@ -1,11 +1,13 @@
-use std::ffi::{CStr, CString};
 use std::os::fd::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::pin::Pin;
 
 use libssh_rs_sys::{self as libssh};
+use tokio::io;
 use tokio::io::Interest;
 use tokio::io::unix::AsyncFd;
+
+use crate::libssh::error;
 
 struct Handle {
     session: libssh::ssh_session,
@@ -57,7 +59,7 @@ impl Session {
         }
     }
 
-    pub async fn handle_key_exchange(&mut self) {
+    pub async fn handle_key_exchange(&mut self) -> io::Result<()> {
         loop {
             let mut guard = self
                 .handle
@@ -68,14 +70,10 @@ impl Session {
             let handle = guard.get_inner();
 
             match unsafe { libssh::ssh_handle_key_exchange(handle.session) } {
-                rc if rc == libssh::SSH_AGAIN as i32 => guard.clear_ready(),
-                rc if rc == libssh::SSH_OK as i32 => break,
-                _ => {
-                    let err =
-                        unsafe { CStr::from_ptr(libssh::ssh_get_error(handle.session as *mut _)) };
-
-                    panic!("key exchange failed: {}", err.to_string_lossy());
-                }
+                error::SSH_OK => break Ok(()),
+                error::SSH_AGAIN => guard.clear_ready(),
+                error::SSH_ERROR => break Err(error::libssh(handle.session as _)),
+                _ => unreachable!(),
             }
         }
     }

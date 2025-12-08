@@ -15,7 +15,7 @@ maud = { version = "0.27.0", features = ["axum"] }
 futures-util = "0.3.31"
 serde = { version = "1.0.228", features = ["derive"] }
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "postgres", "time", "macros", "migrate"] }
-rand = "0.9.2"
+rand = "0.8.5"
 time = { version = "0.3.44", features = ["formatting"] }
 thiserror = "2.0.17"
 anyhow = "1.0.100"

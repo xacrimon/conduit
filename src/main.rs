@@ -80,17 +80,19 @@ async fn run() -> Result<()> {
 
         tt.spawn(async move {
             let host_key = fs::read_to_string(config.ssh.host_key).await.unwrap();
-            let mut listener = libssh::Listener::bind(&host_key, &addr, config.ssh.port).await;
+            let mut listener = libssh::Listener::bind(&host_key, &addr, config.ssh.port).await.unwrap();
             info!("ssh server worker starting on {}", addr);
 
             loop {
                 tokio::select! {
                     _ = ct.cancelled() => break,
-                    mut session = listener.accept() => {
+                    session = listener.accept() => {
+                        let mut session = session.unwrap();
+
                         tt_clone.spawn(async move {
                             info!("accepted ssh connection");
                             session.configure();
-                            session.handle_key_exchange().await;
+                            session.handle_key_exchange().await.unwrap();
                         });
                     },
                 }

@@ -4,7 +4,6 @@ mod session;
 
 use std::sync::Once;
 
-pub use error::Error;
 use libssh_rs_sys::{self as libssh};
 pub use listener::Listener;
 pub use session::Session;

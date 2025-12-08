@@ -13,7 +13,7 @@ pub async fn unique_string(
     let mut buffer = vec![0u8; bytes];
 
     loop {
-        rand::rng().fill_bytes(&mut buffer);
+        rand::thread_rng().fill_bytes(&mut buffer);
         let candidate = general_purpose::URL_SAFE_NO_PAD.encode(&buffer);
 
         let exists = sqlx::query_scalar::<_, bool>(&sql)
