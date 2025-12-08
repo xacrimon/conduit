@@ -80,7 +80,9 @@ async fn run() -> Result<()> {
 
         tt.spawn(async move {
             let host_key = fs::read_to_string(config.ssh.host_key).await.unwrap();
-            let mut listener = libssh::Listener::bind(&host_key, &addr, config.ssh.port).await.unwrap();
+            let mut listener = libssh::Listener::bind(&host_key, &addr, config.ssh.port)
+                .await
+                .unwrap();
             info!("ssh server worker starting on {}", addr);
 
             loop {

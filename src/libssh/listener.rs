@@ -1,4 +1,4 @@
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::mem;
 use std::os::fd::{AsRawFd, OwnedFd};
 
@@ -27,9 +27,8 @@ impl Listener {
                 libssh::ssh_bind_options_e::SSH_BIND_OPTIONS_IMPORT_KEY_STR,
                 c_key.into_raw() as *const std::os::raw::c_void,
             );
-            if rc != libssh::SSH_OK as i32 {
-                let err = CStr::from_ptr(libssh::ssh_get_error(bind as *mut _));
-                panic!("failed to set host key: {}", err.to_string_lossy());
+            if rc != error::SSH_OK {
+                return Err(error::libssh(bind as _));
             }
 
             let rc = libssh::ssh_bind_options_set(
@@ -37,18 +36,14 @@ impl Listener {
                 libssh::ssh_bind_options_e::SSH_BIND_OPTIONS_BANNER,
                 c_banner.into_raw() as *const std::os::raw::c_void,
             );
-            if rc != libssh::SSH_OK as i32 {
-                let err = CStr::from_ptr(libssh::ssh_get_error(bind as *mut _));
-                panic!("failed to set banner: {}", err.to_string_lossy());
+            if rc != error::SSH_OK {
+                return Err(error::libssh(bind as _));
             }
-        }
 
-        unsafe {
             libssh::ssh_bind_set_blocking(bind, 0);
             let rc = libssh::ssh_bind_listen(bind);
-            if rc != libssh::SSH_OK as i32 {
-                let err = CStr::from_ptr(libssh::ssh_get_error(bind as *mut _));
-                panic!("failed to listen on bind: {}", err.to_string_lossy());
+            if rc != error::SSH_OK {
+                return Err(error::libssh(bind as _));
             }
         }
 
