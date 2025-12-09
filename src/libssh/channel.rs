@@ -36,7 +36,7 @@ impl ChannelState {
             channel_request_response_function: None,
         };
 
-        let mut channel = Box::pin(Self {
+        let mut state = Box::pin(Self {
             channel,
             callbacks,
             events: VecDeque::new(),
@@ -44,10 +44,14 @@ impl ChannelState {
         });
 
         unsafe {
-            channel.as_mut().get_unchecked_mut().callbacks.userdata = &*channel as *const _ as _;
+            state.as_mut().get_unchecked_mut().callbacks.userdata = &*state as *const _ as _;
         }
 
-        channel
+        unsafe {
+            libssh::ssh_set_channel_callbacks(channel, &state.callbacks as *const _ as _);
+        }
+
+        state
     }
 }
 
