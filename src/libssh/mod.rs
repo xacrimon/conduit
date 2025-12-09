@@ -1,10 +1,11 @@
+mod channel;
 mod error;
 mod listener;
 mod session;
+mod util;
 
 use std::sync::Once;
 
-pub use error::LibsshError;
 use libssh_rs_sys::{self as libssh};
 pub use listener::Listener;
 pub use session::Session;
