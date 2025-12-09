@@ -5,15 +5,15 @@ use std::{marker, mem, ptr};
 use libssh_rs_sys as libssh;
 
 // TODO: needs https://doc.rust-lang.org/std/pin/struct.UnsafePinned.html
-struct Channel {
+pub(crate) struct ChannelState {
     channel: libssh::ssh_channel,
     callbacks: libssh::ssh_channel_callbacks_struct,
     events: VecDeque<ChannelEvent>,
     _pinned: marker::PhantomPinned,
 }
 
-impl Channel {
-    fn new(channel: libssh::ssh_channel) -> Pin<Box<Self>> {
+impl ChannelState {
+    pub(crate) fn new(channel: libssh::ssh_channel) -> Pin<Box<Self>> {
         let callbacks = libssh::ssh_channel_callbacks_struct {
             size: mem::size_of::<libssh::ssh_channel_callbacks_struct>(),
             userdata: ptr::null_mut(),
@@ -48,6 +48,15 @@ impl Channel {
         }
 
         channel
+    }
+}
+
+impl Drop for ChannelState {
+    fn drop(&mut self) {
+        unsafe {
+            libssh::ssh_channel_close(self.channel);
+            libssh::ssh_channel_free(self.channel);
+        }
     }
 }
 

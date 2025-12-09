@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use std::ffi::{c_char, c_int, c_void};
 use std::os::fd::AsRawFd;
 use std::os::unix::io::RawFd;
@@ -7,8 +6,9 @@ use std::{marker, mem, ptr};
 
 use libssh_rs_sys as libssh;
 use tokio::io::unix::AsyncFd;
-use tokio::io::{self, Interest, Ready};
+use tokio::io::{self, Interest};
 
+use crate::libssh::channel::ChannelState;
 use crate::libssh::error;
 
 pub struct Session {
@@ -28,7 +28,7 @@ impl Session {
         let handle = self.handle.get_mut();
 
         unsafe {
-            libssh::ssh_set_auth_methods(handle.session, libssh::SSH_AUTH_METHOD_NONE as i32);
+            libssh::ssh_set_auth_methods(handle.session, libssh::SSH_AUTH_METHOD_PUBLICKEY as i32);
         }
     }
 
@@ -85,9 +85,9 @@ impl Session {
             match handle.as_mut().process_events() {
                 Ok(()) => (),
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                    guard.clear_ready_matching(Ready::READABLE);
-                    // TODO: when should I clear writable?
-                    //       https://github.com/libssh/libssh-mirror/blob/ac6d2fad4a8bf07277127736367e90387646363f/src/socket.c#L294
+                    // TODO: is this correct?
+                    // https://github.com/libssh/libssh-mirror/blob/ac6d2fad4a8bf07277127736367e90387646363f/src/socket.c#L294
+                    guard.clear_ready();
                     break Ok(());
                 }
                 Err(e) => break Err(e),
@@ -101,7 +101,7 @@ struct Handle {
     session: libssh::ssh_session,
     ssh_event: libssh::ssh_event,
     callbacks: libssh::ssh_server_callbacks_struct,
-    events: VecDeque<SessionEvent>,
+    channel: Option<Pin<Box<ChannelState>>>,
     _pinned: marker::PhantomPinned,
 }
 
@@ -113,9 +113,9 @@ impl Handle {
             size: mem::size_of::<libssh::ssh_server_callbacks_struct>(),
             userdata: ptr::null_mut(),
             auth_password_function: None,
-            auth_none_function: Some(Self::callback_auth_none),
+            auth_none_function: None,
             auth_gssapi_mic_function: None,
-            auth_pubkey_function: None,
+            auth_pubkey_function: Some(Self::callback_auth_pubkey),
             service_request_function: Some(Self::callback_service_request_function),
             channel_open_request_session_function: Some(
                 Self::callback_channel_open_request_session,
@@ -129,7 +129,7 @@ impl Handle {
             session,
             ssh_event,
             callbacks,
-            events: VecDeque::new(),
+            channel: None,
             _pinned: marker::PhantomPinned,
         });
 
@@ -155,9 +155,11 @@ impl Handle {
         }
     }
 
-    unsafe extern "C" fn callback_auth_none(
+    unsafe extern "C" fn callback_auth_pubkey(
         _ssh_session: libssh::ssh_session,
         _username: *const c_char,
+        _pubkey: libssh::ssh_key,
+        _signature_state: c_char,
         _userdata: *mut c_void,
     ) -> c_int {
         libssh::ssh_auth_e_SSH_AUTH_SUCCESS
@@ -173,9 +175,19 @@ impl Handle {
 
     unsafe extern "C" fn callback_channel_open_request_session(
         _ssh_session: libssh::ssh_session,
-        _userdata: *mut c_void,
+        userdata: *mut c_void,
     ) -> libssh::ssh_channel {
-        ptr::null_mut()
+        let handle_ptr = userdata as *mut Handle;
+        let mut handle = unsafe { Pin::new_unchecked(&mut *handle_ptr) };
+
+        if handle.channel.is_some() {
+            return ptr::null_mut();
+        }
+
+        let channel = unsafe { libssh::ssh_channel_new(handle.session) };
+        let slot = unsafe { &mut handle.as_mut().get_unchecked_mut().channel };
+        *slot = Some(ChannelState::new(channel));
+        channel
     }
 }
 
@@ -188,6 +200,7 @@ impl AsRawFd for Pin<Box<Handle>> {
 impl Drop for Handle {
     fn drop(&mut self) {
         unsafe {
+            drop(self.channel.take());
             libssh::ssh_event_free(self.ssh_event);
             libssh::ssh_disconnect(self.session);
             libssh::ssh_free(self.session);
@@ -197,5 +210,3 @@ impl Drop for Handle {
 
 unsafe impl Send for Handle {}
 unsafe impl Sync for Handle {}
-
-enum SessionEvent {}
