@@ -1,4 +1,3 @@
-mod channel;
 mod error;
 mod listener;
 mod session;
@@ -9,7 +8,6 @@ pub use error::LibsshError;
 use libssh_rs_sys::{self as libssh};
 pub use listener::Listener;
 pub use session::Session;
-pub use channel::Channel;
 
 static LIBSSH_INIT: Once = Once::new();
 static LIBSSH_FINALIZE: Once = Once::new();

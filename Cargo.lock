@@ -192,7 +192,6 @@ dependencies = [
  "rand",
  "serde",
  "sha2",
- "slab",
  "sqlx",
  "thiserror",
  "time",

@@ -39,6 +39,12 @@ impl Listener {
             if rc != error::SSH_OK {
                 return Err(error::libssh(bind as _));
             }
+
+            libssh::ssh_bind_set_blocking(bind, 0);
+            let rc = libssh::ssh_bind_listen(bind);
+            if rc != error::SSH_OK {
+                return Err(error::libssh(bind as _));
+            }
         }
 
         Ok(Self { bind, listener })

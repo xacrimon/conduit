@@ -10,13 +10,11 @@ mod routes;
 mod signal;
 mod utils;
 
-use std::time::Duration;
-
 use anyhow::Result;
 use axum::Router;
 use config::Config;
 use sqlx::PgPool;
-use tokio::{fs, time};
+use tokio::fs;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
 
@@ -97,8 +95,12 @@ async fn run() -> Result<()> {
 
                         tt_clone.spawn(async move {
                             debug!("accepted ssh connection");
-                            time::sleep(Duration::from_secs(5)).await;
-                            session.close();
+                            session.configure();
+                            session.handle_key_exchange().await.unwrap();
+
+                            loop {
+                                session.wait().await.unwrap();
+                            }
                         });
                     },
                 }
