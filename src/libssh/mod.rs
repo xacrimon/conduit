@@ -2,7 +2,6 @@ mod channel;
 mod error;
 mod listener;
 mod session;
-mod util;
 
 use std::sync::Once;
 

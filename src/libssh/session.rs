@@ -9,7 +9,7 @@ use libssh_rs_sys as libssh;
 use tokio::io::unix::AsyncFd;
 use tokio::io::{self, Interest, Ready};
 
-use crate::libssh::{error, util};
+use crate::libssh::error;
 
 pub struct Session {
     handle: AsyncFd<Pin<Box<Handle>>>,
@@ -70,9 +70,6 @@ impl Session {
 
     pub async fn wait(&mut self) -> io::Result<()> {
         loop {
-            let poll_flags =
-                unsafe { libssh::ssh_get_poll_flags(self.handle.get_ref().session) as u32 };
-
             let mut guard = self
                 .handle
                 .ready_mut(Interest::READABLE | Interest::WRITABLE)
@@ -88,7 +85,9 @@ impl Session {
             match handle.as_mut().process_events() {
                 Ok(()) => (),
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                    guard.clear_ready();
+                    guard.clear_ready_matching(Ready::READABLE);
+                    // TODO: when should I clear writable?
+                    //       https://github.com/libssh/libssh-mirror/blob/ac6d2fad4a8bf07277127736367e90387646363f/src/socket.c#L294
                     break Ok(());
                 }
                 Err(e) => break Err(e),
