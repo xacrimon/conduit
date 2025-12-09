@@ -1,10 +1,11 @@
 use std::collections::VecDeque;
+use std::ffi::{c_char, c_int, c_void};
 use std::os::fd::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::pin::Pin;
-use std::{marker, ptr};
+use std::{marker, mem, ptr};
 
-use libssh_rs_sys::{self as libssh};
+use libssh_rs_sys as libssh;
 use tokio::io::unix::AsyncFd;
 use tokio::io::{self, Interest, Ready};
 
@@ -52,7 +53,19 @@ impl Session {
 
     pub async fn wait(&mut self) -> io::Result<()> {
         loop {
-            let mut guard = self.handle.ready_mut(Interest::READABLE).await.unwrap();
+            let poll_flags =
+                unsafe { libssh::ssh_get_poll_flags(self.handle.get_ref().session) as u32 };
+
+            let interests = match poll_flags {
+                libssh::SSH_READ_PENDING => Interest::READABLE,
+                libssh::SSH_WRITE_PENDING => Interest::WRITABLE,
+                f if f == libssh::SSH_READ_PENDING | libssh::SSH_WRITE_PENDING => {
+                    Interest::READABLE | Interest::WRITABLE
+                }
+                _ => unreachable!(),
+            };
+
+            let mut guard = self.handle.ready_mut(interests).await.unwrap();
 
             let handle = guard.get_inner_mut();
 
@@ -70,6 +83,7 @@ impl Session {
     }
 }
 
+// TODO: needs https://doc.rust-lang.org/std/pin/struct.UnsafePinned.html
 struct Handle {
     session: libssh::ssh_session,
     ssh_event: libssh::ssh_event,
@@ -92,14 +106,16 @@ impl Handle {
         };
 
         let callbacks = libssh::ssh_server_callbacks_struct {
-            size: 0,
+            size: mem::size_of::<libssh::ssh_server_callbacks_struct>(),
             userdata: ptr::null_mut(),
             auth_password_function: None,
-            auth_none_function: None,
+            auth_none_function: Some(Self::callback_auth_none),
             auth_gssapi_mic_function: None,
             auth_pubkey_function: None,
-            service_request_function: None,
-            channel_open_request_session_function: None,
+            service_request_function: Some(Self::callback_service_request_function),
+            channel_open_request_session_function: Some(
+                Self::callback_channel_open_request_session,
+            ),
             gssapi_select_oid_function: None,
             gssapi_accept_sec_ctx_function: None,
             gssapi_verify_mic_function: None,
@@ -134,6 +150,29 @@ impl Handle {
             _ => unreachable!(),
         }
     }
+
+    unsafe extern "C" fn callback_auth_none(
+        ssh_session: libssh::ssh_session,
+        username: *const c_char,
+        userdata: *mut c_void,
+    ) -> c_int {
+        libssh::ssh_auth_e_SSH_AUTH_SUCCESS
+    }
+
+    unsafe extern "C" fn callback_service_request_function(
+        ssh_session: libssh::ssh_session,
+        service: *const c_char,
+        userdata: *mut c_void,
+    ) -> c_int {
+        -1
+    }
+
+    unsafe extern "C" fn callback_channel_open_request_session(
+        ssh_session: libssh::ssh_session,
+        userdata: *mut c_void,
+    ) -> libssh::ssh_channel {
+        ptr::null_mut()
+    }
 }
 
 impl AsRawFd for Pin<Box<Handle>> {
@@ -157,16 +196,18 @@ unsafe impl Sync for Handle {}
 
 enum SessionEvent {}
 
+// TODO: needs https://doc.rust-lang.org/std/pin/struct.UnsafePinned.html
 struct Channel {
+    channel: libssh::ssh_channel,
     callbacks: libssh::ssh_channel_callbacks_struct,
     events: VecDeque<SessionEvent>,
     _pinned: marker::PhantomPinned,
 }
 
 impl Channel {
-    fn new() -> Pin<Box<Self>> {
+    fn new(channel: libssh::ssh_channel) -> Pin<Box<Self>> {
         let callbacks = libssh::ssh_channel_callbacks_struct {
-            size: 0,
+            size: mem::size_of::<libssh::ssh_channel_callbacks_struct>(),
             userdata: ptr::null_mut(),
             channel_data_function: None,
             channel_eof_function: None,
@@ -188,6 +229,7 @@ impl Channel {
         };
 
         let mut channel = Box::pin(Self {
+            channel,
             callbacks,
             events: VecDeque::new(),
             _pinned: marker::PhantomPinned,

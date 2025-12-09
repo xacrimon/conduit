@@ -1,3 +1,5 @@
+#![feature(unsafe_pinned)]
+
 mod config;
 mod db;
 mod libssh;
@@ -95,6 +97,10 @@ async fn run() -> Result<()> {
                             debug!("accepted ssh connection");
                             session.configure();
                             session.handle_key_exchange().await.unwrap();
+
+                            loop {
+                                session.wait().await.unwrap();
+                            }
                         });
                     },
                 }
