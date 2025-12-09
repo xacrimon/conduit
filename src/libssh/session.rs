@@ -159,11 +159,13 @@ enum SessionEvent {}
 
 struct Channel {
     callbacks: libssh::ssh_channel_callbacks_struct,
+    events: VecDeque<SessionEvent>,
+    _pinned: marker::PhantomPinned,
 }
 
 impl Channel {
     fn new() -> Pin<Box<Self>> {
-        let channel_callbacks = libssh::ssh_channel_callbacks_struct {
+        let callbacks = libssh::ssh_channel_callbacks_struct {
             size: 0,
             userdata: ptr::null_mut(),
             channel_data_function: None,
@@ -186,7 +188,9 @@ impl Channel {
         };
 
         let mut channel = Box::pin(Self {
-            callbacks: channel_callbacks,
+            callbacks,
+            events: VecDeque::new(),
+            _pinned: marker::PhantomPinned,
         });
 
         unsafe {
@@ -196,3 +200,5 @@ impl Channel {
         channel
     }
 }
+
+enum ChannelEvent {}
