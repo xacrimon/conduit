@@ -94,6 +94,11 @@ impl Session {
             }
         }
     }
+
+    pub fn channel_state(&mut self) -> Option<Pin<&mut ChannelState>> {
+        let handle = self.handle.get_mut().as_mut();
+        handle.channel().as_mut().map(|c| c.as_mut())
+    }
 }
 
 // TODO: needs https://doc.rust-lang.org/std/pin/struct.UnsafePinned.html
@@ -155,6 +160,10 @@ impl Handle {
         }
     }
 
+    fn channel(self: Pin<&mut Self>) -> &mut Option<Pin<Box<ChannelState>>> {
+        unsafe { &mut self.get_unchecked_mut().channel }
+    }
+
     unsafe extern "C" fn callback_auth_pubkey(
         _ssh_session: libssh::ssh_session,
         _username: *const c_char,
@@ -178,15 +187,14 @@ impl Handle {
         userdata: *mut c_void,
     ) -> libssh::ssh_channel {
         let handle_ptr = userdata as *mut Handle;
-        let mut handle = unsafe { Pin::new_unchecked(&mut *handle_ptr) };
+        let handle = unsafe { Pin::new_unchecked(&mut *handle_ptr) };
 
         if handle.channel.is_some() {
             return ptr::null_mut();
         }
 
         let channel = unsafe { libssh::ssh_channel_new(handle.session) };
-        let slot = unsafe { &mut handle.as_mut().get_unchecked_mut().channel };
-        *slot = Some(ChannelState::new(channel));
+        *handle.channel() = Some(ChannelState::new(channel));
         channel
     }
 }
