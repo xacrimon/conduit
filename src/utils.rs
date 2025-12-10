@@ -3,6 +3,17 @@ use base64::engine::general_purpose;
 use rand::RngCore;
 use sqlx::PgTransaction;
 
+macro_rules! _re {
+    ($re_expr:literal) => {{
+        static RE: ::std::sync::LazyLock<::regex_lite::Regex> =
+            ::std::sync::LazyLock::new(|| ::regex_lite::Regex::new($re_expr).unwrap());
+
+        &*RE
+    }};
+}
+
+pub(crate) use _re as re;
+
 pub async fn unique_string(
     txn: &mut PgTransaction<'_>,
     table: &str,

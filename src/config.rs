@@ -68,3 +68,8 @@ pub struct Ssh {
     pub port: u16,
     pub host_key: PathBuf,
 }
+
+#[derive(Deserialize)]
+pub struct Git {
+    pub repository_path: PathBuf,
+}

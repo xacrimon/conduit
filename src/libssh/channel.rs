@@ -220,6 +220,7 @@ impl Drop for ChannelState {
     }
 }
 
+#[derive(Debug)]
 pub enum ChannelEvent {
     Data { data: Vec<u8>, is_stderr: bool },
     Eof,

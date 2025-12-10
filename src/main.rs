@@ -8,6 +8,7 @@ mod middleware;
 mod model;
 mod routes;
 mod signal;
+mod ssh;
 mod utils;
 
 use anyhow::Result;
@@ -85,22 +86,20 @@ async fn run() -> Result<()> {
             let mut listener = libssh::Listener::bind(&host_key, &addr, config.ssh.port)
                 .await
                 .unwrap();
+
             info!("ssh server worker starting on {}", addr);
 
             loop {
                 tokio::select! {
                     _ = ct.cancelled() => break,
                     session = listener.accept() => {
-                        let mut session = session.unwrap();
+                        let session = session.unwrap();
 
                         tt_clone.spawn(async move {
                             debug!("accepted ssh connection");
-                            session.configure();
-                            session.handle_key_exchange().await.unwrap();
-                            session.authenticate().await.unwrap();
 
-                            loop {
-                                session.wait().await.unwrap();
+                            if let Err(err) = ssh::handle_session(session).await {
+                                error!("ssh session error: {}", err);
                             }
                         });
                     },
