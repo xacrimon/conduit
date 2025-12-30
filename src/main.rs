@@ -1,3 +1,4 @@
+#![feature(cfg_select)]
 #![feature(unsafe_pinned)]
 
 mod config;

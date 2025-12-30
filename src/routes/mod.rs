@@ -1,4 +1,5 @@
 mod assets;
+#[cfg(debug_assertions)]
 mod autoreload;
 mod error;
 mod hub;
@@ -14,9 +15,14 @@ use crate::AppState;
 use crate::middleware::auth::Session;
 
 pub fn routes() -> Router<AppState> {
+    let autoreload = cfg_select! {
+        debug_assertions => { autoreload::routes() }
+        _ => { Router::new() }
+    };
+
     Router::new()
         .merge(assets::routes())
-        .merge(autoreload::routes())
+        .merge(autoreload)
         .merge(hub::routes())
         .merge(meta::routes())
         .merge(paste::routes())
