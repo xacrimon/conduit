@@ -1,23 +1,36 @@
 use std::env;
 use std::path::{Path, PathBuf};
+use std::pin::pin;
 use std::process::Stdio;
+use std::time::Duration;
 
 use tokio::process::Command;
-use tokio::select;
+use tokio::{select, time};
+use tokio_util::sync::CancellationToken;
 
 use crate::config::Config;
 use crate::libssh::{ChannelEvent, Session};
 use crate::utils::re;
 
-pub async fn handle_session(config: &Config, mut session: Session) -> anyhow::Result<()> {
+pub async fn handle_session(
+    config: &Config,
+    mut session: Session,
+    ct: CancellationToken,
+) -> anyhow::Result<()> {
     session.configure();
     session.handle_key_exchange().await.unwrap();
     session.authenticate().await.unwrap();
+
+    let mut cancel = pin!(async {
+        ct.cancelled().await;
+        time::sleep(Duration::from_secs(10)).await;
+    });
 
     let mut child = None;
 
     'outer: loop {
         select! {
+            _ = &mut cancel => break,
             res = session.wait() => {
                 res.unwrap();
 
@@ -78,5 +91,9 @@ fn parse_command(command: &str) -> (&str, &str, &str) {
         .unwrap();
 
     let (_, [command, user, repo]) = caps.extract();
+    if !matches!(command, "git-upload-pack") {
+        panic!("unsupported command: {}", command);
+    }
+
     (command, user, repo)
 }

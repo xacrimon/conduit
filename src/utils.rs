@@ -1,10 +1,10 @@
+use std::mem;
 use std::task::Waker;
 
 use base64::Engine as _;
 use base64::engine::general_purpose;
 use rand::RngCore;
 use sqlx::PgTransaction;
-use std::mem;
 
 macro_rules! _re {
     ($re_expr:literal) => {{

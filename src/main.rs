@@ -105,11 +105,12 @@ async fn run() -> Result<()> {
                     session = listener.accept() => {
                         let session = session.unwrap();
                         let state = state.clone();
+                        let ct = ct.clone();
 
                         tokio::spawn(async move {
                             debug!("accepted ssh connection");
 
-                            if let Err(err) = ssh::handle_session(&state.config, session).await {
+                            if let Err(err) = ssh::handle_session(&state.config, session, ct).await {
                                 error!("ssh session error: {}", err);
                             }
                         });
