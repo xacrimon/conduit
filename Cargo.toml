@@ -7,10 +7,10 @@ rust-version = "1.90"
 [dependencies]
 tokio = { version = "=1.48.0", features = ["rt", "macros", "net", "fs", "time", "sync", "signal", "process"] }
 tokio-util = { version = "0.7.17", features = ["rt"] }
-axum = { version = "0.8.7", default-features = false, features = ["http1", "tokio", "form", "query"] }
-axum-extra = { version = "0.12.2", features = ["cookie"] }
+axum = { version = "0.8.8", default-features = false, features = ["http1", "tokio", "form", "query"] }
+axum-extra = { version = "0.12.5", features = ["cookie"] }
 tower = "0.5.2"
-tower-http = { version = "0.6.7", features = ["fs", "catch-panic"] }
+tower-http = { version = "0.6.8", features = ["fs", "catch-panic"] }
 maud = { version = "0.27.0", features = ["axum"] }
 futures-util = "0.3.31"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -19,14 +19,14 @@ rand = "0.8.5"
 time = { version = "0.3.44", features = ["formatting"] }
 thiserror = "2.0.17"
 anyhow = "1.0.100"
-tracing = "0.1.43"
+tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", default-features = false, features = ["std", "fmt", "ansi"] }
-log = "0.4.28"
+log = "0.4.29"
 prometheus = { version = "0.14.0", default-features = false }
 dotenvy = "0.15.7"
 sha2 = "0.10.9"
 base64 = "0.22.1"
 url = "2.5.7"
-toml = { version = "0.9.8", default-features = false, features = ["parse", "serde"] }
+toml = { version = "0.9.10", default-features = false, features = ["parse", "serde"] }
 libssh-rs-sys = { git = "https://github.com/xacrimon/libssh-rs.git", rev = "f769c15", features = ["vendored"] }
 regex-lite = "0.1.8"
