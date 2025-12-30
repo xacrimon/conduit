@@ -4,6 +4,7 @@ use base64::Engine as _;
 use base64::engine::general_purpose;
 use rand::RngCore;
 use sqlx::PgTransaction;
+use std::mem;
 
 macro_rules! _re {
     ($re_expr:literal) => {{
@@ -80,7 +81,7 @@ impl MutWaker {
     #[inline(never)]
     fn register_slow(&mut self, waker: &Waker) {
         // using mem::replace instead of assignment seems to produce much more optimal assembly.
-        _ = std::mem::replace(&mut self.waker, waker.clone());
+        _ = mem::replace(&mut self.waker, waker.clone());
     }
 
     pub fn unregister(&mut self) {
@@ -89,6 +90,6 @@ impl MutWaker {
 
     fn unregister_inner(&mut self) -> Waker {
         self.registered = false;
-        std::mem::replace(&mut self.waker, Waker::noop().clone())
+        mem::replace(&mut self.waker, Waker::noop().clone())
     }
 }
