@@ -13,3 +13,6 @@ port = 8080
 host = "0.0.0.0"
 port = 8022
 host_key = "data/ssh_host_ed25519_key"
+
+[git]
+repository_path = "data/repositories"

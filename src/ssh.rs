@@ -1,32 +1,54 @@
 use std::env;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 
-use tokio::{fs, process};
+use tokio::process::Command;
+use tokio::select;
 
+use crate::config::Config;
 use crate::libssh::{ChannelEvent, Session};
 use crate::utils::re;
 
-pub async fn handle_session(mut session: Session) -> anyhow::Result<()> {
+pub async fn handle_session(config: &Config, mut session: Session) -> anyhow::Result<()> {
     session.configure();
     session.handle_key_exchange().await.unwrap();
     session.authenticate().await.unwrap();
 
+    let mut child = None;
+
     'outer: loop {
-        session.wait().await.unwrap();
+        select! {
+            res = session.wait() => {
+                res.unwrap();
 
-        if let Some(mut channel_state) = session.channel_state() {
-            while let Some(event) = channel_state.as_mut().events().pop_front() {
-                dbg!(&event);
+                if let Some(mut channel_state) = session.channel_state() {
+                    while let Some(event) = channel_state.as_mut().events().pop_front() {
+                        dbg!(&event);
 
-                match event {
-                    ChannelEvent::ExeqRequest { command } => {
-                        let (bin, user, repo) = parse_command(&command);
-                        dbg!(&bin, &user, &repo);
+                        match event {
+                            ChannelEvent::ExeqRequest { command } => {
+                                assert!(child.is_none());
+
+                                let (bin, user, repo) = parse_command(&command);
+                                let bin_path = search_path(Path::new(bin)).unwrap();
+                                dbg!(repo_path(config, user, repo));
+
+                                let mut cmd = Command::new(bin_path);
+                                cmd.stdin(Stdio::piped());
+                                cmd.stdout(Stdio::piped());
+                                cmd.stderr(Stdio::piped());
+                                cmd.arg(repo_path(config, user, repo));
+
+                                child = Some(cmd.spawn().unwrap());
+                                dbg!(&bin, &user, &repo);
+                            }
+                            ChannelEvent::Close => break 'outer,
+                            _ => todo!(),
+                        }
                     }
-                    ChannelEvent::Close => break 'outer,
-                    _ => todo!(),
                 }
             }
+
         }
     }
 
@@ -44,6 +66,10 @@ fn search_path(filename: &Path) -> Option<PathBuf> {
     }
 
     None
+}
+
+fn repo_path(config: &Config, user: &str, repo: &str) -> PathBuf {
+    config.git.repository_path.join(user).join(repo)
 }
 
 fn parse_command(command: &str) -> (&str, &str, &str) {

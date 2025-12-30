@@ -10,6 +10,7 @@ pub struct Config {
     pub database: Database,
     pub http: Http,
     pub ssh: Ssh,
+    pub git: Git,
 }
 
 impl Config {

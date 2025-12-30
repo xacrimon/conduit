@@ -55,7 +55,6 @@ impl Session {
         unsafe {
             let rc = libssh::ssh_event_add_session(handle.ssh_event, handle.session);
             if rc != error::SSH_OK {
-                libssh::ssh_event_free(handle.ssh_event);
                 return Err(error::libssh(handle.session as _));
             }
         }

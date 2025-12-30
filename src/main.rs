@@ -11,6 +11,8 @@ mod signal;
 mod ssh;
 mod utils;
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use axum::Router;
 use config::Config;
@@ -22,6 +24,7 @@ use tracing::{debug, error, info};
 #[derive(Clone)]
 struct AppState {
     db: PgPool,
+    config: Arc<Config>,
 }
 
 fn main() -> Result<()> {
@@ -46,7 +49,11 @@ async fn run() -> Result<()> {
     let db = db::connect(&config.database).await?;
     metrics::get();
 
-    let state = AppState { db };
+    let state = AppState {
+        db,
+        config: Arc::new(config),
+    };
+
     let middleware = ServiceBuilder::new()
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -58,11 +65,11 @@ async fn run() -> Result<()> {
         .merge(routes::routes())
         .merge(metrics::routes())
         .layer(middleware)
-        .with_state(state);
+        .with_state(state.clone());
 
     {
         let signal = ct.clone().cancelled_owned();
-        let addr = format!("{}:{}", config.http.host, config.http.port);
+        let addr = format!("{}:{}", state.config.http.host, state.config.http.port);
 
         tt.spawn(async move {
             let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
@@ -78,12 +85,15 @@ async fn run() -> Result<()> {
 
     {
         let ct = ct.clone();
-        let addr = config.ssh.host.clone();
-        let tt_clone = tt.clone();
+        let addr = state.config.ssh.host.clone();
+        let state = state.clone();
 
         tt.spawn(async move {
-            let host_key = fs::read_to_string(config.ssh.host_key).await.unwrap();
-            let mut listener = libssh::Listener::bind(&host_key, &addr, config.ssh.port)
+            let host_key = fs::read_to_string(&state.config.ssh.host_key)
+                .await
+                .unwrap();
+
+            let mut listener = libssh::Listener::bind(&host_key, &addr, state.config.ssh.port)
                 .await
                 .unwrap();
 
@@ -94,11 +104,12 @@ async fn run() -> Result<()> {
                     _ = ct.cancelled() => break,
                     session = listener.accept() => {
                         let session = session.unwrap();
+                        let state = state.clone();
 
-                        tt_clone.spawn(async move {
+                        tokio::spawn(async move {
                             debug!("accepted ssh connection");
 
-                            if let Err(err) = ssh::handle_session(session).await {
+                            if let Err(err) = ssh::handle_session(&state.config, session).await {
                                 error!("ssh session error: {}", err);
                             }
                         });
