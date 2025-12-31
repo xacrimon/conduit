@@ -1,6 +1,6 @@
 use axum::Router;
 use axum::extract::Form;
-use axum::response::Redirect;
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use serde::Deserialize;
 
@@ -15,7 +15,11 @@ pub fn routes() -> Router<AppStateRef> {
         .route("/register", post(do_register))
 }
 
-async fn page_register(session: Option<Session>) -> maud::Markup {
+async fn page_register(session: Option<Session>) -> Response {
+    if session.is_some() {
+        return Redirect::to("/").into_response();
+    }
+
     let markup = maud::html! {
         form method="post" {
             label for="username" { "Username" }
@@ -28,7 +32,7 @@ async fn page_register(session: Option<Session>) -> maud::Markup {
         }
     };
 
-    shell::document(markup, "register", session)
+    shell::document(markup, "register", session).into_response()
 }
 
 #[derive(Deserialize)]

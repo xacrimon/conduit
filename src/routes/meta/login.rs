@@ -1,6 +1,6 @@
 use axum::Router;
 use axum::extract::{Form, Query};
-use axum::response::Redirect;
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use serde::Deserialize;
@@ -17,7 +17,11 @@ pub fn routes() -> Router<AppStateRef> {
         .route("/login", post(do_login))
 }
 
-async fn page_login(session: Option<Session>) -> maud::Markup {
+async fn page_login(session: Option<Session>) -> Response {
+    if session.is_some() {
+        return Redirect::to("/").into_response();
+    }
+
     let markup = maud::html! {
         form method="post" {
             label for="username" { "Username" }
@@ -30,7 +34,7 @@ async fn page_login(session: Option<Session>) -> maud::Markup {
         }
     };
 
-    shell::document(markup, "log in", session)
+    shell::document(markup, "log in", session).into_response()
 }
 
 #[derive(Deserialize)]
