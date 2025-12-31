@@ -8,6 +8,7 @@ mod paste;
 mod shell;
 
 use axum::Router;
+use axum::http::StatusCode;
 use axum::routing::get;
 pub use error::AppError;
 
@@ -27,6 +28,7 @@ pub fn routes() -> Router<AppStateRef> {
         .merge(meta::routes())
         .merge(paste::routes())
         .route("/", get(page))
+        .fallback(fallback)
 }
 
 async fn page(session: Option<Session>) -> maud::Markup {
@@ -35,4 +37,8 @@ async fn page(session: Option<Session>) -> maud::Markup {
     };
 
     shell::document(markup, "home", session)
+}
+
+async fn fallback() -> (StatusCode, &'static str) {
+    (StatusCode::NOT_FOUND, "Not Found")
 }
