@@ -4,11 +4,11 @@ use axum::Router;
 use axum::response::IntoResponse;
 use axum::routing::get;
 
-use crate::AppState;
+use crate::state::AppStateRef;
 
 static AUTORELOAD_KEY: LazyLock<u64> = LazyLock::new(rand::random);
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<AppStateRef> {
     Router::new().route("/autoreload", get(autoreload))
 }
 

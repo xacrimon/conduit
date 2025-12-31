@@ -95,7 +95,7 @@ impl Backoff {
     async fn wait(&mut self) -> bool {
         self.tries += 1;
 
-        let steps = [10, 30, 90, 270, 810];
+        let steps = [10, 25, 50, 100, 100];
         if self.tries > steps.len() {
             return false;
         }

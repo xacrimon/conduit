@@ -1,14 +1,15 @@
 use axum::Router;
-use axum::extract::{Form, State};
+use axum::extract::Form;
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use serde::Deserialize;
 
 use crate::middleware::auth::Session;
+use crate::model;
 use crate::routes::{AppError, shell};
-use crate::{AppState, model};
+use crate::state::AppStateRef;
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<AppStateRef> {
     Router::new()
         .route("/register", get(page_register))
         .route("/register", post(do_register))
@@ -37,7 +38,7 @@ struct Register {
 }
 
 async fn do_register(
-    State(state): State<AppState>,
+    state: AppStateRef,
     Form(register): Form<Register>,
 ) -> Result<Redirect, AppError> {
     let Register { username, password } = register;

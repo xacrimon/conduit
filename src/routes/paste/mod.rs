@@ -1,16 +1,17 @@
 mod view;
 
 use axum::Router;
-use axum::extract::{Form, State};
+use axum::extract::Form;
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use serde::Deserialize;
 
 use crate::middleware::auth::Session;
+use crate::model;
 use crate::routes::{AppError, shell};
-use crate::{AppState, model};
+use crate::state::AppStateRef;
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<AppStateRef> {
     Router::new()
         .merge(view::routes())
         .route("/paste", get(page_paste))
@@ -61,7 +62,7 @@ struct Paste {
 }
 
 async fn do_paste(
-    State(state): State<AppState>,
+    state: AppStateRef,
     session: Session,
     Form(paste): Form<Paste>,
 ) -> Result<Redirect, AppError> {

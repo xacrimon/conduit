@@ -1,11 +1,11 @@
 use axum::Router;
 use axum::routing::get;
 
-use crate::AppState;
 use crate::middleware::auth::Session;
 use crate::routes::shell;
+use crate::state::AppStateRef;
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<AppStateRef> {
     Router::new().route("/meta/profile", get(page_profile))
 }
 

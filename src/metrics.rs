@@ -5,7 +5,7 @@ use axum::response::Response;
 use axum::{Router, routing};
 use prometheus::{self, Encoder, IntGauge, TextEncoder, register_int_gauge};
 
-use super::AppState;
+use crate::state::AppStateRef;
 
 macro_rules! metrics {
     ($($t:ident, $name:ident, $desc:expr),*) => {
@@ -30,31 +30,31 @@ macro_rules! metrics {
 }
 
 metrics! {
-    IntGauge, rt_num_alive_tasks, " ",
-    IntGauge, rt_global_queue_depth, " ",
-    IntGauge, rt_worker_total_busy_duration, " ",
-    IntGauge, rt_worker_park_unpark_count, " ",
-    IntGauge, rt_num_blocking_threads, " ",
-    IntGauge, rt_num_idle_blocking_threads, " ",
-    IntGauge, rt_worker_local_queue_depth, " ",
-    IntGauge, rt_blocking_queue_depth, " ",
-    IntGauge, rt_spawned_tasks_count, " ",
-    IntGauge, rt_remote_schedule_count, " ",
-    IntGauge, rt_budget_forced_yield_count, " ",
-    IntGauge, rt_worker_noop_count, " ",
-    IntGauge, rt_worker_poll_count, " ",
-    IntGauge, rt_worker_local_schedule_count, " ",
-    IntGauge, rt_io_driver_fd_registered_count, " ",
-    IntGauge, rt_io_driver_fd_deregistered_count, " ",
-    IntGauge, rt_io_driver_ready_count, " "
+    IntGauge, rt_num_alive_tasks, "Current number of alive tasks in the runtime.",
+    IntGauge, rt_global_queue_depth, "Number of tasks currently scheduled in the runtime's global queue.",
+    IntGauge, rt_worker_total_busy_duration, "Amount of time the worker has been busy.",
+    IntGauge, rt_worker_park_unpark_count, "Total number of times the worker has parked and unparked.",
+    IntGauge, rt_num_blocking_threads, "The number of additional threads spawned by the runtime to handle blocking tasks.",
+    IntGauge, rt_num_idle_blocking_threads, "The number of idle threads, which have been spawned by the runtime to handle blocking tasks.",
+    IntGauge, rt_worker_local_queue_depth, "The number of tasks currently scheduled in the worker's local queue.",
+    IntGauge, rt_blocking_queue_depth, "Number of tasks currently scheduled in the blocking thread pool.",
+    IntGauge, rt_spawned_tasks_count, "Number of tasks spawned in this runtime since it was created.",
+    IntGauge, rt_remote_schedule_count, "Number of tasks scheduled from outside the runtime.",
+    IntGauge, rt_budget_forced_yield_count, "Number of times tht tasks have been forced to yield back to the scheduler after exhausting their task budgets.",
+    IntGauge, rt_worker_noop_count, "Number of times the worker unparked but performed no work before parking again.",
+    IntGauge, rt_worker_poll_count, "Number of tasks the worker has polled.",
+    IntGauge, rt_worker_local_schedule_count, "Number of tasks scheduled from within the runtime on the given worker's local queue.",
+    IntGauge, rt_io_driver_fd_registered_count, "Number of file descriptors that have been registered with the runtime's I/O driver.",
+    IntGauge, rt_io_driver_fd_deregistered_count, "Number of file descriptors that have been deregistered by the runtime's I/O driver.",
+    IntGauge, rt_io_driver_ready_count, "Number of ready events processed by the runtime's I/O driver."
 }
 
 pub fn get() -> &'static Metrics {
     static METRICS: LazyLock<Metrics> = LazyLock::new(|| Metrics::register().unwrap());
-    &METRICS
+    &*METRICS
 }
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<AppStateRef> {
     Router::new().route("/metrics", routing::get(handler))
 }
 

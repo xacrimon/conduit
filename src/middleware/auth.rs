@@ -1,13 +1,15 @@
-use axum::extract::{FromRequestParts, OptionalFromRequestParts, Request, State};
+use axum::extract::{FromRequestParts, OptionalFromRequestParts, Request};
 use axum::http::request::Parts;
 use axum::middleware::Next;
 use axum::response::{Redirect, Response};
 use axum_extra::extract::cookie::CookieJar;
 use url::form_urlencoded;
 
+use crate::model;
 use crate::model::user::UserId;
 use crate::routes::AppError;
-use crate::{AppState, model};
+use crate::state::AppStateRef;
+use crate::utils::AxumNever;
 
 pub const COOKIE_NAME: &str = "conduit_session";
 
@@ -17,12 +19,12 @@ pub struct Session {
     pub username: String,
 }
 
-impl FromRequestParts<AppState> for Session {
+impl FromRequestParts<AppStateRef> for Session {
     type Rejection = Redirect;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        _state: &AppState,
+        _state: &AppStateRef,
     ) -> Result<Self, Self::Rejection> {
         if let Some(session) = parts.extensions.get::<Session>().cloned() {
             Ok(session)
@@ -35,19 +37,19 @@ impl FromRequestParts<AppState> for Session {
     }
 }
 
-impl OptionalFromRequestParts<AppState> for Session {
-    type Rejection = ();
+impl OptionalFromRequestParts<AppStateRef> for Session {
+    type Rejection = AxumNever;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        _state: &AppState,
+        _state: &AppStateRef,
     ) -> Result<Option<Self>, Self::Rejection> {
         Ok(parts.extensions.get::<Session>().cloned())
     }
 }
 
 pub async fn middleware(
-    State(state): State<AppState>,
+    state: AppStateRef,
     mut jar: CookieJar,
     mut request: Request,
     next: Next,

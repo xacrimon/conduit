@@ -1,5 +1,5 @@
 use axum::Router;
-use axum::extract::{Form, Query, State};
+use axum::extract::{Form, Query};
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
@@ -7,10 +7,11 @@ use serde::Deserialize;
 
 use crate::middleware::auth;
 use crate::middleware::auth::Session;
+use crate::model;
 use crate::routes::{AppError, shell};
-use crate::{AppState, model};
+use crate::state::AppStateRef;
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<AppStateRef> {
     Router::new()
         .route("/login", get(page_login))
         .route("/login", post(do_login))
@@ -44,7 +45,7 @@ struct LoginForm {
 }
 
 async fn do_login(
-    State(state): State<AppState>,
+    state: AppStateRef,
     mut jar: CookieJar,
     Query(query): Query<LoginQuery>,
     Form(login): Form<LoginForm>,

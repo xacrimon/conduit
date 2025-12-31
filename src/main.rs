@@ -10,23 +10,16 @@ mod model;
 mod routes;
 mod signal;
 mod ssh;
+mod state;
 mod utils;
-
-use std::sync::Arc;
 
 use anyhow::Result;
 use axum::Router;
 use config::Config;
-use sqlx::PgPool;
+use state::{AppState, AppStateRef};
 use tokio::fs;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
-
-#[derive(Clone)]
-struct AppState {
-    db: PgPool,
-    config: Arc<Config>,
-}
 
 fn main() -> Result<()> {
     tokio::runtime::Builder::new_current_thread()
@@ -48,12 +41,8 @@ async fn run() -> Result<()> {
     let config = Config::load(None).await?;
     let (ct, tt) = signal::bind();
     let db = db::connect(&config.database).await?;
+    let state = AppStateRef::new(AppState { db, config });
     metrics::get();
-
-    let state = AppState {
-        db,
-        config: Arc::new(config),
-    };
 
     let middleware = ServiceBuilder::new()
         .layer(axum::middleware::from_fn_with_state(
@@ -122,6 +111,7 @@ async fn run() -> Result<()> {
     }
 
     tt.wait().await;
+    state.db.close().await;
     libssh::finalize();
     Ok(())
 }

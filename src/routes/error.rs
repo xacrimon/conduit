@@ -2,6 +2,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 
+// TODO: improve error handling
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("internal server error: {0}")]

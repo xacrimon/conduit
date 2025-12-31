@@ -8,9 +8,9 @@ use axum::Router;
 use axum::response::Redirect;
 use axum::routing::get;
 
-use crate::AppState;
+use crate::state::AppStateRef;
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<AppStateRef> {
     Router::new()
         .merge(login::routes())
         .merge(logout::routes())

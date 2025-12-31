@@ -2,7 +2,6 @@ use anyhow::Result;
 use futures_util::FutureExt;
 use sqlx::PgPool;
 
-use crate::model::user;
 use crate::model::user::UserId;
 use crate::{db, utils};
 

@@ -4,7 +4,6 @@ use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use sqlx::PgPool;
 use time::OffsetDateTime;
 
-use crate::db;
 use crate::model::user::UserId;
 
 #[derive(Debug, Clone)]

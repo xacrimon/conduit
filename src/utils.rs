@@ -1,6 +1,7 @@
 use std::mem;
 use std::task::Waker;
 
+use axum::response::{IntoResponse, Response};
 use base64::Engine as _;
 use base64::engine::general_purpose;
 use rand::RngCore;
@@ -91,5 +92,13 @@ impl MutWaker {
     fn unregister_inner(&mut self) -> Waker {
         self.registered = false;
         mem::replace(&mut self.waker, Waker::noop().clone())
+    }
+}
+
+pub enum AxumNever {}
+
+impl IntoResponse for AxumNever {
+    fn into_response(self) -> Response {
+        match self {}
     }
 }

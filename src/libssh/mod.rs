@@ -5,7 +5,7 @@ mod session;
 
 use std::sync::Once;
 
-pub use channel::{ChannelEvent, ChannelState};
+pub use channel::ChannelEvent;
 use libssh_rs_sys::{self as libssh};
 pub use listener::Listener;
 pub use session::Session;
