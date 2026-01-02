@@ -62,15 +62,17 @@ impl ChannelState {
     }
 
     pub fn write(mut self: Pin<&mut Self>, data: &[u8], stderr: bool) -> io::Result<()> {
-        if stderr {
-            todo!();
-        }
+        let write_fn = if !stderr {
+            libssh::ssh_channel_write
+        } else {
+            libssh::ssh_channel_write_stderr
+        };
 
         let do_write = cmp::min(data.len(), *self.as_mut().write_window());
 
         if do_write > 0 {
             let rc = unsafe {
-                libssh::ssh_channel_write(
+                write_fn(
                     self.channel,
                     data.as_ptr() as *const c_void,
                     do_write as u32,
@@ -177,6 +179,7 @@ impl ChannelState {
         bytes: u32,
         userdata: *mut c_void,
     ) -> c_int {
+        dbg!("write_wontblock: {}", bytes);
         let state_ptr = userdata as *mut ChannelState;
         let mut state = unsafe { Pin::new_unchecked(&mut *state_ptr) };
 
@@ -219,6 +222,9 @@ impl Drop for ChannelState {
         }
     }
 }
+
+unsafe impl Send for ChannelState {}
+unsafe impl Sync for ChannelState {}
 
 #[derive(Debug)]
 pub enum ChannelEvent {

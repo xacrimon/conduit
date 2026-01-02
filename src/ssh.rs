@@ -1,10 +1,13 @@
-use std::env;
+use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::pin::pin;
 use std::process::Stdio;
 use std::time::Duration;
+use std::{env, future};
 
-use tokio::process::Command;
+use futures_util::future::BoxFuture;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
 use tokio::{select, time};
 use tokio_util::sync::CancellationToken;
 
@@ -26,7 +29,13 @@ pub async fn handle_session(
         time::sleep(Duration::from_secs(10)).await;
     });
 
-    let mut child = None;
+    let mut child: Option<Child> = None;
+    let mut stdout: Option<ChildStdout> = None;
+    let mut stderr: Option<ChildStderr> = None;
+    let mut stdin: Option<ChildStdin> = None;
+
+    let mut buf_stdout = [0u8; 32];
+    let mut buf_stderr = [0u8; 32];
 
     'outer: loop {
         select! {
@@ -53,19 +62,61 @@ pub async fn handle_session(
                                 cmd.arg(repo_path(config, user, repo));
 
                                 child = Some(cmd.spawn().unwrap());
+                                stdout = Some(child.as_mut().unwrap().stdout.take().unwrap());
+                                stderr = Some(child.as_mut().unwrap().stderr.take().unwrap());
+                                stdin = Some(child.as_mut().unwrap().stdin.take().unwrap());
                                 dbg!(&bin, &user, &repo);
                             }
                             ChannelEvent::Close => break 'outer,
+                            ChannelEvent::Data { data, is_stderr } => {
+                                assert!(!is_stderr);
+                                let Some(stdin) = &mut stdin else { continue };
+                                let _ = stdin.write_all(&data).await;
+                            }
                             _ => todo!(),
                         }
                     }
                 }
             }
+            n = some_await(stdout.as_mut().map(|stdout| stdout.read(&mut buf_stdout))), if stdout.is_some() => {
+                let n = n.unwrap();
+                if n == 0 {
+                    todo!();
+                }
 
+                session.channel_state().unwrap().as_mut().write(&buf_stderr[..n], true).unwrap();
+            }
+            n = some_await(stderr.as_mut().map(|stderr| stderr.read(&mut buf_stderr))), if stderr.is_some() => {
+                let n = n.unwrap();
+                if n == 0 {
+                    todo!();
+                }
+
+                session.channel_state().unwrap().as_mut().write(&buf_stderr[..n], true).unwrap();
+            }
+            status = some_await(child.as_mut().map(|child| child.wait())), if child.is_some() => {
+                let status = status.unwrap();
+
+                if let Some(code) = status.code() {
+                    // TODO: send exit status
+                }
+
+
+            }
         }
     }
 
     Ok(())
+}
+
+async fn some_await<Fut, U>(fut: Option<Fut>) -> U
+where
+    Fut: Future<Output = U>,
+{
+    match fut {
+        Some(fut) => fut.await,
+        None => panic!(),
+    }
 }
 
 fn search_path(filename: &Path) -> Option<PathBuf> {
