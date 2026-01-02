@@ -78,18 +78,19 @@ pub async fn handle_session(
                     }
                 }
             }
+            // TODO: backpressure?
             n = some_await(stdout.as_mut().map(|stdout| stdout.read(&mut buf_stdout))), if stdout.is_some() => {
                 let n = n.unwrap();
                 if n == 0 {
-                    todo!();
+                    // TODO: send channel eof
                 }
 
-                session.channel_state().unwrap().as_mut().write(&buf_stderr[..n], true).unwrap();
+                session.channel_state().unwrap().as_mut().write(&buf_stdout[..n], true).unwrap();
             }
             n = some_await(stderr.as_mut().map(|stderr| stderr.read(&mut buf_stderr))), if stderr.is_some() => {
                 let n = n.unwrap();
                 if n == 0 {
-                    todo!();
+                    // TODO: send channel eof
                 }
 
                 session.channel_state().unwrap().as_mut().write(&buf_stderr[..n], true).unwrap();
@@ -101,7 +102,7 @@ pub async fn handle_session(
                     // TODO: send exit status
                 }
 
-
+                // TODO: handle exit signal
             }
         }
     }
