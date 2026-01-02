@@ -85,7 +85,7 @@ pub async fn handle_session(
                     // TODO: send channel eof
                 }
 
-                session.channel_state().unwrap().as_mut().write(&buf_stdout[..n], true).unwrap();
+                session.channel_state().unwrap().as_mut().write(&buf_stdout[..n], false).unwrap();
             }
             n = some_await(stderr.as_mut().map(|stderr| stderr.read(&mut buf_stderr))), if stderr.is_some() => {
                 let n = n.unwrap();

@@ -75,6 +75,7 @@ async fn run() -> Result<()> {
 
     {
         let ct = ct.clone();
+        let tt2 = tt.clone();
         let addr = state.config.ssh.host.clone();
         let state = state.clone();
 
@@ -97,7 +98,7 @@ async fn run() -> Result<()> {
                         let state = state.clone();
                         let ct = ct.clone();
 
-                        tokio::spawn(async move {
+                        tt2.spawn(async move {
                             debug!("accepted ssh connection");
 
                             if let Err(err) = ssh::handle_session(&state.config, session, ct).await {
