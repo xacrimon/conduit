@@ -44,8 +44,6 @@ pub async fn handle_session(
 
                 if let Some(mut channel_state) = session.channel_state() {
                     while let Some(event) = channel_state.as_mut().events().pop_front() {
-                        dbg!(&event);
-
                         match event {
                             ChannelEvent::ExeqRequest { command } => {
                                 assert!(child.is_none());
