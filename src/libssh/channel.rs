@@ -7,6 +7,8 @@ use libssh_rs_sys as libssh;
 use tokio::io;
 use tracing::debug;
 
+use crate::libssh::error;
+
 // TODO: needs https://doc.rust-lang.org/std/pin/struct.UnsafePinned.html
 pub struct ChannelState {
     channel: libssh::ssh_channel,
@@ -91,6 +93,26 @@ impl ChannelState {
         let left = data[do_write..].to_vec();
         if !left.is_empty() {
             self.as_mut().queued_writes().push_back(left);
+        }
+
+        Ok(())
+    }
+
+    pub fn send_eof(self: Pin<&mut Self>) -> io::Result<()> {
+        let rc = unsafe { libssh::ssh_channel_send_eof(self.channel) };
+
+        if rc != 0 {
+            return Err(error::libssh(self.channel as _));
+        }
+
+        Ok(())
+    }
+
+    pub fn send_exit_status(self: Pin<&mut Self>, status: i32) -> io::Result<()> {
+        let rc = unsafe { libssh::ssh_channel_request_send_exit_status(self.channel, status) };
+
+        if rc != 0 {
+            return Err(error::libssh(self.channel as _));
         }
 
         Ok(())

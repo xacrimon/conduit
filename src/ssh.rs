@@ -1,15 +1,14 @@
-use std::os::unix::process::ExitStatusExt;
+use std::env;
 use std::path::{Path, PathBuf};
 use std::pin::pin;
 use std::process::Stdio;
 use std::time::Duration;
-use std::{env, future};
 
-use futures_util::future::BoxFuture;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
 use tokio::{select, time};
 use tokio_util::sync::CancellationToken;
+use tracing::debug;
 
 use crate::config::Config;
 use crate::libssh::{ChannelEvent, Session};
@@ -73,36 +72,47 @@ pub async fn handle_session(
                                 let Some(stdin) = &mut stdin else { continue };
                                 let _ = stdin.write_all(&data).await;
                             }
-                            _ => todo!(),
+                            ChannelEvent::Eof => {
+                                let mut stdin = stdin.take().unwrap();
+                                stdin.flush().await.unwrap();
+                                drop(stdin); // close stdin
+                            }
                         }
                     }
                 }
             }
             // TODO: backpressure?
-            n = some_await(stdout.as_mut().map(|stdout| stdout.read(&mut buf_stdout))), if stdout.is_some() => {
+            // TODO: finish sending buffered data before closing
+            n = unwrap_await(stdout.as_mut().map(|stdout| stdout.read(&mut buf_stdout))), if stdout.is_some() => {
                 let n = n.unwrap();
                 if n == 0 {
-                    // TODO: send channel eof
+                    debug!("stdout zero read");
+                    drop(stdout.take()) // close stdout
+                    // TODO: send eof
                 }
 
                 session.channel_state().unwrap().as_mut().write(&buf_stdout[..n], false).unwrap();
             }
-            n = some_await(stderr.as_mut().map(|stderr| stderr.read(&mut buf_stderr))), if stderr.is_some() => {
+            n = unwrap_await(stderr.as_mut().map(|stderr| stderr.read(&mut buf_stderr))), if stderr.is_some() => {
                 let n = n.unwrap();
                 if n == 0 {
-                    // TODO: send channel eof
+                    debug!("stderr zero read");
+                    drop(stderr.take()) // close stderr
+                    // TODO: send eof
                 }
 
                 session.channel_state().unwrap().as_mut().write(&buf_stderr[..n], true).unwrap();
             }
-            status = some_await(child.as_mut().map(|child| child.wait())), if child.is_some() => {
+            status = unwrap_await(child.as_mut().map(|child| child.wait())), if child.is_some() => {
                 let status = status.unwrap();
+                debug!("child exited: {:?}", status);
 
                 if let Some(code) = status.code() {
-                    // TODO: send exit status
+                    session.channel_state().unwrap().as_mut().send_exit_status(code).unwrap();
                 }
 
                 // TODO: handle exit signal
+                break 'outer;
             }
         }
     }
@@ -110,14 +120,11 @@ pub async fn handle_session(
     Ok(())
 }
 
-async fn some_await<Fut, U>(fut: Option<Fut>) -> U
+async fn unwrap_await<Fut, U>(fut: Option<Fut>) -> U
 where
     Fut: Future<Output = U>,
 {
-    match fut {
-        Some(fut) => fut.await,
-        None => panic!(),
-    }
+    fut.unwrap().await
 }
 
 fn search_path(filename: &Path) -> Option<PathBuf> {
