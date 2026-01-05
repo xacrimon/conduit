@@ -145,7 +145,7 @@ fn repo_path(config: &Config, user: &str, repo: &str) -> PathBuf {
 }
 
 fn parse_command(command: &str) -> (&str, &str, &str) {
-    let caps = re!(r#"^([a-zA-Z\-]+) '/([a-zA-Z0-9]+)/([a-zA-Z0-9\.]+)'$"#)
+    let caps = re!(r#"^([a-zA-Z\-]+) '/([a-zA-Z0-9]+)/([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*\.git)'$"#)
         .captures(command)
         .unwrap();
 
