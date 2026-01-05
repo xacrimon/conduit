@@ -69,8 +69,8 @@ pub async fn handle_session(
                             ChannelEvent::Close => break 'outer,
                             ChannelEvent::Data { data, is_stderr } => {
                                 assert!(!is_stderr);
-                                let Some(stdin) = &mut stdin else { continue };
-                                let _ = stdin.write_all(&data).await;
+                                let stdin = stdin.as_mut().unwrap();
+                                stdin.write_all(&data).await.unwrap();
                             }
                             ChannelEvent::Eof => {
                                 let mut stdin = stdin.take().unwrap();
@@ -150,7 +150,7 @@ fn parse_command(command: &str) -> (&str, &str, &str) {
         .unwrap();
 
     let (_, [command, user, repo]) = caps.extract();
-    if !matches!(command, "git-upload-pack") {
+    if !matches!(command, "git-upload-pack" | "git-receive-pack") {
         panic!("unsupported command: {}", command);
     }
 
