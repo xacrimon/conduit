@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_void};
+use std::ffi::{CStr, c_char, c_int, c_void};
 use std::os::fd::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::pin::Pin;
@@ -175,10 +175,18 @@ impl Handle {
 
     unsafe extern "C" fn callback_service_request_function(
         _ssh_session: libssh::ssh_session,
-        _service: *const c_char,
+        service: *const c_char,
         _userdata: *mut c_void,
     ) -> c_int {
-        0
+        let maybe_service = unsafe { CStr::from_ptr(service).to_str() };
+        let Ok(service) = maybe_service else {
+            return -1;
+        };
+
+        match service {
+            "ssh-userauth" => 0,
+            _ => -1,
+        }
     }
 
     unsafe extern "C" fn callback_channel_open_request_session(

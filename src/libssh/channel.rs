@@ -195,6 +195,7 @@ impl ChannelState {
         0
     }
 
+    // TODO: can't panic through FFI
     unsafe extern "C" fn callback_write_wontblock(
         _ssh_session: libssh::ssh_session,
         _ssh_channel: libssh::ssh_channel,
