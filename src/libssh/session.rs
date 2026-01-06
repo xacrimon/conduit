@@ -97,6 +97,11 @@ impl Session {
         let handle = self.handle.get_mut().as_mut();
         handle.channel().as_mut().map(|c| c.as_mut())
     }
+
+    pub fn close_channel(&mut self) {
+        let handle = self.handle.get_mut().as_mut();
+        handle.close_channel();
+    }
 }
 
 // TODO: needs https://doc.rust-lang.org/std/pin/struct.UnsafePinned.html
@@ -158,6 +163,10 @@ impl Handle {
             error::SSH_ERROR => Err(error::libssh(self.session as _)),
             _ => unreachable!(),
         }
+    }
+
+    fn close_channel(self: Pin<&mut Self>) {
+        self.channel().take();
     }
 
     fn keys(self: Pin<&mut Self>) -> &mut Vec<(String, String)> {

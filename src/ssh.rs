@@ -45,9 +45,10 @@ pub async fn handle_session(
             _ = &mut cancel => break,
             res = session.wait() => {
                 res.unwrap();
+                let mut close_channel = false;
 
                 if let Some(mut channel_state) = session.channel_state() {
-                    while let Some(event) = channel_state.as_mut().events().pop_front() {
+                    'inner: while let Some(event) = channel_state.as_mut().events().pop_front() {
                         match event {
                             ChannelEvent::ExeqRequest { command } => {
                                 assert!(child.is_none());
@@ -68,7 +69,10 @@ pub async fn handle_session(
                                 stdin = Some(child.as_mut().unwrap().stdin.take().unwrap());
                                 dbg!(&bin, &user, &repo);
                             }
-                            ChannelEvent::Close => break 'outer,
+                            ChannelEvent::Close => {
+                                close_channel = true;
+                                break 'inner;
+                            },
                             ChannelEvent::Data { data, is_stderr } => {
                                 assert!(!is_stderr);
                                 let stdin = stdin.as_mut().unwrap();
@@ -82,14 +86,21 @@ pub async fn handle_session(
                         }
                     }
                 }
+
+                // TODO: continue processing events?
+                if close_channel {
+                    session.close_channel();
+                }
             }
             // TODO: finish sending buffered data before closing
             n = unwrap_await(stdout.as_mut().map(|stdout| stdout.read(&mut buf_stdout))), if stdout.is_some() && buf_stdout_len == 0 => {
                 let n = n.unwrap();
                 if n == 0 {
                     debug!("stdout zero read");
-                    drop(stdout.take()) // close stdout
-                    // TODO: send eof
+                    drop(stdout.take()); // close stdout
+
+                    let channel_state = session.channel_state().unwrap();
+                    channel_state.send_eof().unwrap();
                 }
 
                 buf_stdout_len = n;
@@ -103,7 +114,7 @@ pub async fn handle_session(
                 let n = n.unwrap();
                 if n == 0 {
                     debug!("stderr zero read");
-                    drop(stderr.take()) // close stderr
+                    drop(stderr.take()); // close stderr
                     // TODO: send eof
                 }
 
@@ -156,7 +167,7 @@ fn repo_path(config: &Config, user: &str, repo: &str) -> PathBuf {
 }
 
 fn parse_command(command: &str) -> (&str, &str, &str) {
-    let caps = re!(r#"^([a-zA-Z\-]+) '/?([a-zA-Z0-9]+)/([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*\.git)'$"#)
+    let caps = re!(r#"^([a-zA-Z\-]+) '/?([a-zA-Z0-9]+)/([\.\-a-zA-Z0-9]+\.git)'$"#)
         .captures(command)
         .unwrap();
 
