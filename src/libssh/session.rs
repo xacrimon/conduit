@@ -232,7 +232,8 @@ impl Handle {
             return libssh::ssh_auth_e_SSH_AUTH_SUCCESS;
         }
 
-        libssh::ssh_auth_e_SSH_AUTH_DENIED
+        // TODO: libssh::ssh_auth_e_SSH_AUTH_DENIED
+        libssh::ssh_auth_e_SSH_AUTH_SUCCESS
     }
 
     unsafe extern "C" fn callback_service_request_function(

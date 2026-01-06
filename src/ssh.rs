@@ -1,9 +1,8 @@
-use std::env;
 use std::path::{Path, PathBuf};
 use std::pin::pin;
 use std::process::Stdio;
 use std::time::Duration;
-use std::future;
+use std::{env, future};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
@@ -115,8 +114,9 @@ pub async fn handle_session(
                 let n = channel_state.as_mut().write(&buf_stderr[..buf_stderr_len], true).unwrap();
                 buf_stderr_len -= n;
             }
-            status = unwrap_await(child.as_mut().map(|child| child.wait())), if child.is_some() => {
+            status = unwrap_await(child.as_mut().map(|child| child.wait())), if child.is_some() && buf_stdout_len == 0 && buf_stderr_len == 0 => {
                 let status = status.unwrap();
+                child = None;
                 debug!("child exited: {:?}", status);
 
                 if let Some(code) = status.code() {
@@ -124,7 +124,6 @@ pub async fn handle_session(
                 }
 
                 // TODO: handle exit signal
-                break 'outer;
             }
         }
     }
