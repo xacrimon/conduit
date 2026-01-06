@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -6,7 +7,6 @@ use axum::http::request::Parts;
 use sqlx::PgPool;
 
 use crate::config::Config;
-use crate::utils::AxumNever;
 
 pub struct AppState {
     pub db: PgPool,
@@ -31,7 +31,7 @@ impl Deref for AppStateRef {
 }
 
 impl FromRequestParts<AppStateRef> for AppStateRef {
-    type Rejection = AxumNever;
+    type Rejection = Infallible;
 
     async fn from_request_parts(
         _parts: &mut Parts,

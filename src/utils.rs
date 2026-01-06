@@ -94,11 +94,3 @@ impl MutWaker {
         mem::replace(&mut self.waker, Waker::noop().clone())
     }
 }
-
-pub enum AxumNever {}
-
-impl IntoResponse for AxumNever {
-    fn into_response(self) -> Response {
-        match self {}
-    }
-}

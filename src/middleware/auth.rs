@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use axum::extract::{FromRequestParts, OptionalFromRequestParts, Request};
 use axum::http::request::Parts;
 use axum::middleware::Next;
@@ -9,7 +11,6 @@ use crate::model;
 use crate::model::user::UserId;
 use crate::routes::AppError;
 use crate::state::AppStateRef;
-use crate::utils::AxumNever;
 
 pub const COOKIE_NAME: &str = "conduit_session";
 
@@ -38,7 +39,7 @@ impl FromRequestParts<AppStateRef> for Session {
 }
 
 impl OptionalFromRequestParts<AppStateRef> for Session {
-    type Rejection = AxumNever;
+    type Rejection = Infallible;
 
     async fn from_request_parts(
         parts: &mut Parts,
