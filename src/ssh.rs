@@ -12,16 +12,18 @@ use tracing::debug;
 
 use crate::config::Config;
 use crate::libssh::{ChannelEvent, Session};
+use crate::state::AppStateRef;
 use crate::utils::re;
 
 pub async fn handle_session(
-    config: &Config,
+    state: &AppStateRef,
     mut session: Session,
     ct: CancellationToken,
 ) -> anyhow::Result<()> {
     session.configure();
+    // TODO: load keys from database
+    session.allowed_keys(vec![]);
     session.handle_key_exchange().await.unwrap();
-    session.authenticate().await.unwrap();
 
     let mut cancel = pin!(async {
         ct.cancelled().await;
@@ -50,13 +52,13 @@ pub async fn handle_session(
 
                                 let (bin, user, repo) = parse_command(&command);
                                 let bin_path = search_path(Path::new(bin)).unwrap();
-                                dbg!(repo_path(config, user, repo));
+                                dbg!(repo_path(&state.config, user, repo));
 
                                 let mut cmd = Command::new(bin_path);
                                 cmd.stdin(Stdio::piped());
                                 cmd.stdout(Stdio::piped());
                                 cmd.stderr(Stdio::piped());
-                                cmd.arg(repo_path(config, user, repo));
+                                cmd.arg(repo_path(&state.config, user, repo));
 
                                 child = Some(cmd.spawn().unwrap());
                                 stdout = Some(child.as_mut().unwrap().stdout.take().unwrap());
@@ -143,7 +145,7 @@ fn repo_path(config: &Config, user: &str, repo: &str) -> PathBuf {
 }
 
 fn parse_command(command: &str) -> (&str, &str, &str) {
-    let caps = re!(r#"^([a-zA-Z\-]+) '/([a-zA-Z0-9]+)/([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*\.git)'$"#)
+    let caps = re!(r#"^([a-zA-Z\-]+) '/?([a-zA-Z0-9]+)/([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*\.git)'$"#)
         .captures(command)
         .unwrap();
 

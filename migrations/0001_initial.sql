@@ -4,6 +4,15 @@ CREATE TABLE users (
     password_hash text not null
 );
 
+CREATE TABLE user_keys (
+    type text not null check (type in ('ssh-ed25519')),
+    encoded text not null,
+    username text not null,
+    hostname text not null,
+    user_id integer not null references users(id),
+    primary key (type, encoded)
+);
+
 CREATE TABLE sessions (
     token text primary key,
     user_id integer not null references users(id),

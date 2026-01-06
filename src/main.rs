@@ -101,7 +101,7 @@ async fn run() -> Result<()> {
                         tt2.spawn(async move {
                             debug!("accepted ssh connection");
 
-                            if let Err(err) = ssh::handle_session(&state.config, session, ct).await {
+                            if let Err(err) = ssh::handle_session(&state, session, ct).await {
                                 error!("ssh session error: {}", err);
                             }
                         });

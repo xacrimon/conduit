@@ -32,6 +32,10 @@ impl Session {
         }
     }
 
+    pub fn allowed_keys(&mut self, keys: Vec<(String, String)>) {
+        *self.handle.get_mut().as_mut().keys() = keys;
+    }
+
     pub async fn handle_key_exchange(&mut self) -> io::Result<()> {
         loop {
             let mut guard = self
@@ -59,11 +63,6 @@ impl Session {
             }
         }
 
-        Ok(())
-    }
-
-    pub async fn authenticate(&mut self) -> io::Result<()> {
-        // TODO: handle authentication in a blocking task
         Ok(())
     }
 
@@ -105,6 +104,7 @@ struct Handle {
     session: libssh::ssh_session,
     ssh_event: libssh::ssh_event,
     callbacks: libssh::ssh_server_callbacks_struct,
+    keys: Vec<(String, String)>,
     channel: Option<Pin<Box<ChannelState>>>,
     _pinned: marker::PhantomPinned,
 }
@@ -133,6 +133,7 @@ impl Handle {
             session,
             ssh_event,
             callbacks,
+            keys: Vec::new(),
             channel: None,
             _pinned: marker::PhantomPinned,
         });
@@ -159,18 +160,79 @@ impl Handle {
         }
     }
 
+    fn keys(self: Pin<&mut Self>) -> &mut Vec<(String, String)> {
+        unsafe { &mut self.get_unchecked_mut().keys }
+    }
+
     fn channel(self: Pin<&mut Self>) -> &mut Option<Pin<Box<ChannelState>>> {
         unsafe { &mut self.get_unchecked_mut().channel }
     }
 
     unsafe extern "C" fn callback_auth_pubkey(
         _ssh_session: libssh::ssh_session,
-        _username: *const c_char,
-        _pubkey: libssh::ssh_key,
-        _signature_state: c_char,
-        _userdata: *mut c_void,
+        username: *const c_char,
+        pubkey: libssh::ssh_key,
+        signature_state: c_char,
+        userdata: *mut c_void,
     ) -> c_int {
-        libssh::ssh_auth_e_SSH_AUTH_SUCCESS
+        let handle_ptr = userdata as *mut Handle;
+        let handle = unsafe { Pin::new_unchecked(&mut *handle_ptr) };
+
+        const SSH_PUBLICKEY_STATE_NONE: c_char =
+            libssh::ssh_publickey_state_e::SSH_PUBLICKEY_STATE_NONE as _;
+
+        const SSH_PUBLICKEY_STATE_VALID: c_char =
+            libssh::ssh_publickey_state_e::SSH_PUBLICKEY_STATE_VALID as _;
+
+        // TODO: ??? https://github.com/libssh/libssh-mirror/blob/ac6d2fad4a8bf07277127736367e90387646363f/examples/ssh_server.c#L572
+        if signature_state == SSH_PUBLICKEY_STATE_NONE {
+            return libssh::ssh_auth_e_SSH_AUTH_SUCCESS;
+        }
+
+        if signature_state != SSH_PUBLICKEY_STATE_VALID {
+            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+        }
+
+        let maybe_username = unsafe { CStr::from_ptr(username).to_str() };
+        let Ok(username) = maybe_username else {
+            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+        };
+
+        if username != "git" {
+            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+        }
+
+        // TODO: configure SSH_BIND_OPTIONS_PUBKEY_ACCEPTED_KEY_TYPES
+        let ty = unsafe { libssh::ssh_key_type(pubkey) };
+        if ty != libssh::ssh_keytypes_e_SSH_KEYTYPE_ED25519 {
+            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+        }
+
+        let mut pubkey_buf: *mut c_char = ptr::null_mut();
+
+        unsafe {
+            let rc = libssh::ssh_pki_export_pubkey_base64(pubkey, &mut pubkey_buf);
+            if rc != error::SSH_OK {
+                return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+            }
+        }
+
+        let maybe_pubkey = unsafe { CStr::from_ptr(pubkey_buf).to_str() };
+        let Ok(pubkey) = maybe_pubkey.map(ToOwned::to_owned) else {
+            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+        };
+
+        unsafe {
+            libssh::ssh_string_free_char(pubkey_buf);
+        }
+
+        let entry = handle.keys.iter().find(|(key, _)| key == &pubkey);
+        if let Some((_, username)) = entry {
+            dbg!("authenticated user: {}", username);
+            return libssh::ssh_auth_e_SSH_AUTH_SUCCESS;
+        }
+
+        libssh::ssh_auth_e_SSH_AUTH_DENIED
     }
 
     unsafe extern "C" fn callback_service_request_function(
