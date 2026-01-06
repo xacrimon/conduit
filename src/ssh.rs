@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::pin::pin;
 use std::process::Stdio;
 use std::time::Duration;
+use std::future;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
@@ -36,7 +37,9 @@ pub async fn handle_session(
     let mut stdin: Option<ChildStdin> = None;
 
     let mut buf_stdout = [0u8; 32];
+    let mut buf_stdout_len = 0;
     let mut buf_stderr = [0u8; 32];
+    let mut buf_stderr_len = 0;
 
     'outer: loop {
         select! {
@@ -81,9 +84,8 @@ pub async fn handle_session(
                     }
                 }
             }
-            // TODO: backpressure?
             // TODO: finish sending buffered data before closing
-            n = unwrap_await(stdout.as_mut().map(|stdout| stdout.read(&mut buf_stdout))), if stdout.is_some() => {
+            n = unwrap_await(stdout.as_mut().map(|stdout| stdout.read(&mut buf_stdout))), if stdout.is_some() && buf_stdout_len == 0 => {
                 let n = n.unwrap();
                 if n == 0 {
                     debug!("stdout zero read");
@@ -91,9 +93,14 @@ pub async fn handle_session(
                     // TODO: send eof
                 }
 
-                session.channel_state().unwrap().as_mut().write(&buf_stdout[..n], false).unwrap();
+                buf_stdout_len = n;
             }
-            n = unwrap_await(stderr.as_mut().map(|stderr| stderr.read(&mut buf_stderr))), if stderr.is_some() => {
+            _ = future::ready(()), if session.channel_state().map(|channel| channel.writable()).unwrap_or(false) && buf_stdout_len > 0 => {
+                let mut channel_state = session.channel_state().unwrap();
+                let n = channel_state.as_mut().write(&buf_stdout[..buf_stdout_len], false).unwrap();
+                buf_stdout_len -= n;
+            }
+            n = unwrap_await(stderr.as_mut().map(|stderr| stderr.read(&mut buf_stderr))), if stderr.is_some() && buf_stderr_len == 0 => {
                 let n = n.unwrap();
                 if n == 0 {
                     debug!("stderr zero read");
@@ -101,7 +108,12 @@ pub async fn handle_session(
                     // TODO: send eof
                 }
 
-                session.channel_state().unwrap().as_mut().write(&buf_stderr[..n], true).unwrap();
+                buf_stderr_len = n;
+            }
+            _ = future::ready(()), if session.channel_state().map(|channel| channel.writable()).unwrap_or(false) && buf_stderr_len > 0 => {
+                let mut channel_state = session.channel_state().unwrap();
+                let n = channel_state.as_mut().write(&buf_stderr[..buf_stderr_len], true).unwrap();
+                buf_stderr_len -= n;
             }
             status = unwrap_await(child.as_mut().map(|child| child.wait())), if child.is_some() => {
                 let status = status.unwrap();

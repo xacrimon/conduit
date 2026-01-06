@@ -15,7 +15,6 @@ pub struct ChannelState {
     callbacks: libssh::ssh_channel_callbacks_struct,
     events: VecDeque<ChannelEvent>,
     write_window: usize,
-    queued_writes: VecDeque<Vec<u8>>,
     _pinned: marker::PhantomPinned,
 }
 
@@ -48,7 +47,6 @@ impl ChannelState {
             callbacks,
             events: VecDeque::new(),
             write_window: 0,
-            queued_writes: VecDeque::new(),
             _pinned: marker::PhantomPinned,
         });
 
@@ -63,7 +61,7 @@ impl ChannelState {
         state
     }
 
-    pub fn write(mut self: Pin<&mut Self>, data: &[u8], stderr: bool) -> io::Result<()> {
+    pub fn write(mut self: Pin<&mut Self>, data: &[u8], stderr: bool) -> io::Result<usize> {
         let write_fn = if !stderr {
             libssh::ssh_channel_write
         } else {
@@ -71,31 +69,29 @@ impl ChannelState {
         };
 
         let do_write = cmp::min(data.len(), *self.as_mut().write_window());
-
-        if do_write > 0 {
-            let rc = unsafe {
-                write_fn(
-                    self.channel,
-                    data.as_ptr() as *const c_void,
-                    do_write as u32,
-                )
-            };
-
-            if rc == libssh::SSH_ERROR as i32 {
-                panic!();
-            }
-
-            assert_eq!(rc as usize, do_write);
-
-            *self.as_mut().write_window() -= do_write;
+        if do_write == 0 {
+            return Err(io::ErrorKind::WouldBlock.into());
         }
 
-        let left = data[do_write..].to_vec();
-        if !left.is_empty() {
-            self.as_mut().queued_writes().push_back(left);
+        let rc = unsafe {
+            write_fn(
+                self.channel,
+                data.as_ptr() as *const c_void,
+                do_write as u32,
+            )
+        };
+
+        if rc == libssh::SSH_ERROR {
+            return Err(error::libssh(self.channel as _));
         }
 
-        Ok(())
+        assert_eq!(rc as usize, do_write);
+        *self.as_mut().write_window() -= do_write;
+        Ok(do_write)
+    }
+
+    pub fn writable(mut self: Pin<&mut Self>) -> bool {
+        *self.as_mut().write_window() > 0
     }
 
     pub fn send_eof(self: Pin<&mut Self>) -> io::Result<()> {
@@ -124,10 +120,6 @@ impl ChannelState {
 
     fn write_window(self: Pin<&mut Self>) -> &mut usize {
         unsafe { &mut self.get_unchecked_mut().write_window }
-    }
-
-    fn queued_writes(self: Pin<&mut Self>) -> &mut VecDeque<Vec<u8>> {
-        unsafe { &mut self.get_unchecked_mut().queued_writes }
     }
 
     unsafe extern "C" fn callback_data(
@@ -195,44 +187,16 @@ impl ChannelState {
         0
     }
 
-    // TODO: can't panic through FFI
     unsafe extern "C" fn callback_write_wontblock(
         _ssh_session: libssh::ssh_session,
         _ssh_channel: libssh::ssh_channel,
         bytes: u32,
         userdata: *mut c_void,
     ) -> c_int {
-        dbg!("write_wontblock: {}", bytes);
         let state_ptr = userdata as *mut ChannelState;
         let mut state = unsafe { Pin::new_unchecked(&mut *state_ptr) };
 
         *state.as_mut().write_window() = bytes as usize;
-
-        while *state.as_mut().write_window() > 0 && !state.as_mut().queued_writes().is_empty() {
-            let front = state.as_mut().queued_writes().pop_front().unwrap();
-            let do_write = cmp::min(front.len(), *state.as_mut().write_window());
-
-            let rc = unsafe {
-                libssh::ssh_channel_write(
-                    state.channel,
-                    front.as_ptr() as *const c_void,
-                    do_write as u32,
-                )
-            };
-
-            if rc == libssh::SSH_ERROR as i32 {
-                panic!();
-            }
-
-            assert_eq!(rc as usize, do_write);
-
-            *state.as_mut().write_window() -= do_write;
-
-            let left = front[do_write..].to_vec();
-            if !left.is_empty() {
-                state.as_mut().queued_writes().push_front(left);
-            }
-        }
         0
     }
 }
