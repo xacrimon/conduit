@@ -13,9 +13,9 @@ use axum::routing::get;
 pub use error::AppError;
 
 use crate::middleware::auth::Session;
-use crate::state::AppStateRef;
+use crate::state::AppState;
 
-pub fn routes() -> Router<AppStateRef> {
+pub fn routes() -> Router<AppState> {
     let autoreload = cfg_select! {
         debug_assertions => { autoreload::routes() }
         _ => { Router::new() }

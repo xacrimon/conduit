@@ -7,9 +7,9 @@ use serde::Deserialize;
 use crate::middleware::auth::Session;
 use crate::model;
 use crate::routes::{AppError, shell};
-use crate::state::AppStateRef;
+use crate::state::AppState;
 
-pub fn routes() -> Router<AppStateRef> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/register", get(page_register))
         .route("/register", post(do_register))
@@ -42,7 +42,7 @@ struct Register {
 }
 
 async fn do_register(
-    state: AppStateRef,
+    state: AppState,
     Form(register): Form<Register>,
 ) -> Result<Redirect, AppError> {
     let Register { username, password } = register;

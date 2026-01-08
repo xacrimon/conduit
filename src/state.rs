@@ -8,34 +8,34 @@ use sqlx::PgPool;
 
 use crate::config::Config;
 
-pub struct AppState {
+pub struct AppStateInner {
     pub db: PgPool,
     pub config: Config,
 }
 
 #[derive(Clone)]
-pub struct AppStateRef(Arc<AppState>);
+pub struct AppState(Arc<AppStateInner>);
 
-impl AppStateRef {
-    pub fn new(state: AppState) -> Self {
+impl AppState {
+    pub fn new(state: AppStateInner) -> Self {
         Self(Arc::new(state))
     }
 }
 
-impl Deref for AppStateRef {
-    type Target = AppState;
+impl Deref for AppState {
+    type Target = AppStateInner;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl FromRequestParts<AppStateRef> for AppStateRef {
+impl FromRequestParts<AppState> for AppState {
     type Rejection = Infallible;
 
     async fn from_request_parts(
         _parts: &mut Parts,
-        state: &AppStateRef,
+        state: &AppState,
     ) -> Result<Self, Self::Rejection> {
         Ok(state.clone())
     }

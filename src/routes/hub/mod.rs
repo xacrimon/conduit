@@ -2,8 +2,8 @@ mod profile;
 
 use axum::Router;
 
-use crate::state::AppStateRef;
+use crate::state::AppState;
 
-pub fn routes() -> Router<AppStateRef> {
+pub fn routes() -> Router<AppState> {
     Router::new().merge(profile::routes())
 }

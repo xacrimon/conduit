@@ -9,9 +9,9 @@ use crate::middleware::auth;
 use crate::middleware::auth::Session;
 use crate::model;
 use crate::routes::{AppError, shell};
-use crate::state::AppStateRef;
+use crate::state::AppState;
 
-pub fn routes() -> Router<AppStateRef> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/login", get(page_login))
         .route("/login", post(do_login))
@@ -49,7 +49,7 @@ struct LoginForm {
 }
 
 async fn do_login(
-    state: AppStateRef,
+    state: AppState,
     mut jar: CookieJar,
     Query(query): Query<LoginQuery>,
     Form(login): Form<LoginForm>,

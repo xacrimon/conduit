@@ -10,7 +10,7 @@ use url::form_urlencoded;
 use crate::model;
 use crate::model::user::UserId;
 use crate::routes::AppError;
-use crate::state::AppStateRef;
+use crate::state::AppState;
 
 pub const COOKIE_NAME: &str = "conduit_session";
 
@@ -20,12 +20,12 @@ pub struct Session {
     pub username: String,
 }
 
-impl FromRequestParts<AppStateRef> for Session {
+impl FromRequestParts<AppState> for Session {
     type Rejection = Redirect;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        _state: &AppStateRef,
+        _state: &AppState,
     ) -> Result<Self, Self::Rejection> {
         if let Some(session) = parts.extensions.get::<Session>().cloned() {
             Ok(session)
@@ -38,19 +38,19 @@ impl FromRequestParts<AppStateRef> for Session {
     }
 }
 
-impl OptionalFromRequestParts<AppStateRef> for Session {
+impl OptionalFromRequestParts<AppState> for Session {
     type Rejection = Infallible;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        _state: &AppStateRef,
+        _state: &AppState,
     ) -> Result<Option<Self>, Self::Rejection> {
         Ok(parts.extensions.get::<Session>().cloned())
     }
 }
 
 pub async fn middleware(
-    state: AppStateRef,
+    state: AppState,
     mut jar: CookieJar,
     mut request: Request,
     next: Next,

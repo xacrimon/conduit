@@ -4,9 +4,9 @@ use axum::routing::get;
 
 use crate::middleware::auth::Session;
 use crate::routes::shell;
-use crate::state::AppStateRef;
+use crate::state::AppState;
 
-pub fn routes() -> Router<AppStateRef> {
+pub fn routes() -> Router<AppState> {
     Router::new().route("/~{name}", get(page_profile))
 }
 

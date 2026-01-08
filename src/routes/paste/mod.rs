@@ -9,9 +9,9 @@ use serde::Deserialize;
 use crate::middleware::auth::Session;
 use crate::model;
 use crate::routes::{AppError, shell};
-use crate::state::AppStateRef;
+use crate::state::AppState;
 
-pub fn routes() -> Router<AppStateRef> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .merge(view::routes())
         .route("/paste", get(page_paste))
@@ -62,7 +62,7 @@ struct Paste {
 }
 
 async fn do_paste(
-    state: AppStateRef,
+    state: AppState,
     session: Session,
     Form(paste): Form<Paste>,
 ) -> Result<Redirect, AppError> {

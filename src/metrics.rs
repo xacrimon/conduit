@@ -5,7 +5,7 @@ use axum::response::Response;
 use axum::{Router, routing};
 use prometheus::{self, Encoder, IntGauge, TextEncoder, register_int_gauge};
 
-use crate::state::AppStateRef;
+use crate::state::AppState;
 
 macro_rules! metrics {
     ($($t:ident, $name:ident, $desc:expr),*) => {
@@ -54,7 +54,7 @@ pub fn get() -> &'static Metrics {
     &*METRICS
 }
 
-pub fn routes() -> Router<AppStateRef> {
+pub fn routes() -> Router<AppState> {
     Router::new().route("/metrics", routing::get(handler))
 }
 

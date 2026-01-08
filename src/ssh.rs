@@ -12,11 +12,11 @@ use tracing::debug;
 
 use crate::config::Config;
 use crate::libssh::{ChannelEvent, Session};
-use crate::state::AppStateRef;
+use crate::state::AppState;
 use crate::utils::re;
 
 pub async fn handle_session(
-    state: &AppStateRef,
+    state: &AppState,
     mut session: Session,
     ct: CancellationToken,
 ) -> anyhow::Result<()> {

@@ -4,11 +4,11 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use tower_http::services::{ServeDir, ServeFile};
 
-use crate::state::AppStateRef;
+use crate::state::AppState;
 
 const CSS: &str = include_str!(concat!(env!("OUT_DIR"), "/index.css"));
 
-pub fn routes() -> Router<AppStateRef> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route_service("/favicon.ico", ServeFile::new("public/favicon.ico"))
         .route("/assets/index.css", get(handle_css))

@@ -16,7 +16,7 @@ mod utils;
 use anyhow::Result;
 use axum::Router;
 use config::Config;
-use state::{AppState, AppStateRef};
+use state::{AppState, AppStateInner};
 use tokio::fs;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
@@ -41,7 +41,7 @@ async fn run() -> Result<()> {
     let config = Config::load(None).await?;
     let (ct, tt) = signal::bind();
     let db = db::connect(&config.database).await?;
-    let state = AppStateRef::new(AppState { db, config });
+    let state = AppState::new(AppStateInner { db, config });
     metrics::get();
 
     let middleware = ServiceBuilder::new()
