@@ -21,6 +21,8 @@ use tokio::fs;
 use tower::ServiceBuilder;
 use tracing::{debug, error, info};
 
+pub const VERSION: &str = env!("CONDUIT_VERSION");
+
 fn main() -> Result<()> {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -37,6 +39,7 @@ async fn run() -> Result<()> {
         .try_init()
         .unwrap();
 
+    info!("conduit {}", VERSION);
     libssh::init();
     let config = Config::load(None).await?;
     let (ct, tt) = signal::bind();
