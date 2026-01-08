@@ -1,7 +1,6 @@
 use std::mem;
 use std::task::Waker;
 
-use axum::response::{IntoResponse, Response};
 use base64::Engine as _;
 use base64::engine::general_purpose;
 use rand::RngCore;
@@ -24,6 +23,11 @@ pub async fn unique_string(
     column: &str,
     bytes: usize,
 ) -> String {
+    let validate = |name: &str| name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+    if !validate(table) || !validate(column) {
+        panic!("invalid table or column name");
+    }
+
     let sql = format!("SELECT EXISTS(SELECT 1 FROM {table} WHERE {column} = $1)");
     let mut buffer = vec![0u8; bytes];
 
