@@ -68,8 +68,9 @@ impl ChannelState {
             libssh::ssh_channel_write_stderr
         };
 
-        let do_write = cmp::min(data.len(), *self.as_mut().write_window());
-        if do_write == 0 {
+        let window = *self.as_mut().write_window();
+        let do_write = cmp::min(data.len(), window);
+        if window == 0 {
             return Err(io::ErrorKind::WouldBlock.into());
         }
 

@@ -30,3 +30,7 @@ time = { version = "0.3.44", features = ["formatting"] }
 thiserror = "2.0.17"
 anyhow = "1.0.100"
 regex-lite = "0.1.8"
+
+[build-dependencies]
+sha2 = "0.10.9"
+base64 = "0.22.1"

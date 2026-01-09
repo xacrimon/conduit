@@ -2,6 +2,8 @@ use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 
+use base64::Engine;
+
 fn main() {
     generate_css();
     println!("cargo:rustc-env=CONDUIT_VERSION={}", version());
@@ -51,4 +53,15 @@ fn generate_css() {
     }
 
     Command::new("tailwindcss").args(&args).status().unwrap();
+}
+
+fn compute_asset_name(name: &str, extension: &str, data: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let hash = hasher.finalize();
+    let hash_b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(hash);
+
+    format!("{}-{}.{}", name, hash_b64, extension)
 }
