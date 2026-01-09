@@ -66,3 +66,22 @@ fn hash_password(password: &str) -> String {
     let password_hash = BASE64_STANDARD.encode(password_hash_bytes);
     password_hash
 }
+
+/// Load all SSH keys with their associated usernames.
+/// Returns Vec<(encoded_key, username)> for authentication.
+pub async fn get_all_ssh_keys(db: &PgPool) -> Result<Vec<(String, String)>> {
+    let records = sqlx::query!(
+        r#"
+        SELECT uk.encoded, u.username
+        FROM user_keys uk
+        JOIN users u ON uk.user_id = u.id
+        "#
+    )
+    .fetch_all(db)
+    .await?;
+
+    Ok(records
+        .into_iter()
+        .map(|r| (r.encoded, r.username))
+        .collect())
+}

@@ -1,8 +1,8 @@
+use std::env;
 use std::path::{Path, PathBuf};
 use std::pin::pin;
 use std::process::Stdio;
 use std::time::Duration;
-use std::{env, vec};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
@@ -12,6 +12,7 @@ use tracing::debug;
 
 use crate::config::Config;
 use crate::libssh::{ChannelEvent, Session};
+use crate::model;
 use crate::state::AppState;
 use crate::utils::{RingBuf, re};
 
@@ -21,8 +22,8 @@ pub async fn handle_session(
     ct: CancellationToken,
 ) -> anyhow::Result<()> {
     session.configure();
-    // TODO: load keys from database
-    session.allowed_keys(vec![]);
+    let keys = model::user::get_all_ssh_keys(&state.db).await?;
+    session.allowed_keys(keys);
     session.handle_key_exchange().await.unwrap();
 
     let mut cancel = pin!(async {

@@ -102,6 +102,10 @@ impl Session {
         let handle = self.handle.get_mut().as_mut();
         handle.close_channel();
     }
+
+    pub fn authenticated_user(&self) -> Option<&str> {
+        self.handle.get_ref().authenticated_user.as_deref()
+    }
 }
 
 // TODO: needs https://doc.rust-lang.org/std/pin/struct.UnsafePinned.html
@@ -110,6 +114,7 @@ struct Handle {
     ssh_event: libssh::ssh_event,
     callbacks: libssh::ssh_server_callbacks_struct,
     keys: Vec<(String, String)>,
+    authenticated_user: Option<String>,
     channel: Option<Pin<Box<ChannelState>>>,
     _pinned: marker::PhantomPinned,
 }
@@ -139,6 +144,7 @@ impl Handle {
             ssh_event,
             callbacks,
             keys: Vec::new(),
+            authenticated_user: None,
             channel: None,
             _pinned: marker::PhantomPinned,
         });
@@ -171,6 +177,10 @@ impl Handle {
 
     fn keys(self: Pin<&mut Self>) -> &mut Vec<(String, String)> {
         unsafe { &mut self.get_unchecked_mut().keys }
+    }
+
+    fn authenticated_user(self: Pin<&mut Self>) -> &mut Option<String> {
+        unsafe { &mut self.get_unchecked_mut().authenticated_user }
     }
 
     fn channel(self: Pin<&mut Self>) -> &mut Option<Pin<Box<ChannelState>>> {
@@ -237,12 +247,11 @@ impl Handle {
 
         let entry = handle.keys.iter().find(|(key, _)| key == &pubkey);
         if let Some((_, username)) = entry {
-            dbg!("authenticated user: {}", username);
+            *handle.authenticated_user() = Some(username.clone());
             return libssh::ssh_auth_e_SSH_AUTH_SUCCESS;
         }
 
-        // TODO: libssh::ssh_auth_e_SSH_AUTH_DENIED
-        libssh::ssh_auth_e_SSH_AUTH_SUCCESS
+        libssh::ssh_auth_e_SSH_AUTH_DENIED
     }
 
     unsafe extern "C" fn callback_service_request_function(
