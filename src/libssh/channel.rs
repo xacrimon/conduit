@@ -115,6 +115,16 @@ impl ChannelState {
         Ok(())
     }
 
+    pub fn send_close(self: Pin<&mut Self>) -> io::Result<()> {
+        let rc = unsafe { libssh::ssh_channel_close(self.channel) };
+
+        if rc != 0 {
+            return Err(error::libssh(self.channel as _));
+        }
+
+        Ok(())
+    }
+
     pub fn events(self: Pin<&mut Self>) -> &mut VecDeque<ChannelEvent> {
         unsafe { &mut self.get_unchecked_mut().events }
     }

@@ -1,8 +1,8 @@
-use std::env;
 use std::path::{Path, PathBuf};
 use std::pin::pin;
 use std::process::Stdio;
 use std::time::Duration;
+use std::{env, vec};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
@@ -13,7 +13,7 @@ use tracing::debug;
 use crate::config::Config;
 use crate::libssh::{ChannelEvent, Session};
 use crate::state::AppState;
-use crate::utils::re;
+use crate::utils::{RingBuf, re};
 
 pub async fn handle_session(
     state: &AppState,
@@ -35,12 +35,24 @@ pub async fn handle_session(
     let mut stderr: Option<ChildStderr> = None;
     let mut stdin: Option<ChildStdin> = None;
 
-    let mut buf_stdout = [0u8; 32];
-    let mut buf_stdout_len = 0;
-    let mut buf_stderr = [0u8; 32];
-    let mut buf_stderr_len = 0;
+    let buffer_size = 4096;
+    let mut buf_stdout = RingBuf::new(buffer_size);
+    let mut buf_stderr = RingBuf::new(buffer_size);
 
+    let mut channel_closed = false;
     loop {
+        // If channel is closed, keep processing events until socket would block
+        // This ensures all queued data is transmitted before we disconnect
+        if channel_closed {
+            loop {
+                match session.wait().await {
+                    Ok(()) => continue, // More work done, keep going
+                    Err(_) => break,    // Nothing more to do
+                }
+            }
+            break;
+        }
+
         select! {
             _ = &mut cancel => break,
             res = session.wait() => {
@@ -71,7 +83,7 @@ pub async fn handle_session(
                             }
                             ChannelEvent::Close => {
                                 close_channel = true;
-                                dbg!("channel close received");
+                                debug!("channel close received");
                                 break 'inner;
                             },
                             ChannelEvent::Data { data, is_stderr } => {
@@ -90,63 +102,67 @@ pub async fn handle_session(
 
                 if close_channel {
                     session.close_channel();
+                    break;
                 }
             }
-            // TODO: finish sending buffered data before closing
-            n = unwrap_await(stdout.as_mut().map(|stdout| stdout.read(&mut buf_stdout))), if stdout.is_some() && buf_stdout_len == 0 => {
+            n = unwrap_await(stdout.as_mut().map(|stdout| stdout.read(buf_stdout.writable_slice()))), if stdout.is_some() && buf_stdout.is_empty() => {
                 let n = n.unwrap();
                 if n == 0 {
-                    debug!("stdout zero read");
+                    debug!("stdout EOF");
                     drop(stdout.take()); // close stdout
 
                     let channel_state = session.channel_state().unwrap();
                     channel_state.send_eof().unwrap();
+                } else {
+                    buf_stdout.advance_write(n);
                 }
-
-                buf_stdout_len = n;
             }
-            n = unwrap_await(stderr.as_mut().map(|stderr| stderr.read(&mut buf_stderr))), if stderr.is_some() && buf_stderr_len == 0 => {
+            n = unwrap_await(stderr.as_mut().map(|stderr| stderr.read(buf_stderr.writable_slice()))), if stderr.is_some() && buf_stderr.is_empty() => {
                 let n = n.unwrap();
                 if n == 0 {
                     debug!("stderr zero read");
                     drop(stderr.take()); // close stderr
-                    // TODO: send eof
+                } else {
+                    buf_stderr.advance_write(n);
                 }
-
-                buf_stderr_len = n;
             }
-            status = unwrap_await(child.as_mut().map(|child| child.wait())), if child.is_some() && stdout.is_none() && stderr.is_none() && buf_stdout_len == 0 && buf_stderr_len == 0 => {
+            status = unwrap_await(child.as_mut().map(|child| child.wait())), if child.is_some() && stdout.is_none() && stderr.is_none() && buf_stdout.is_empty() && buf_stderr.is_empty() => {
                 let status = status.unwrap();
+                child = None;
                 debug!("child exited: {:?}", status);
 
+                let mut channel = session.channel_state().unwrap();
                 if let Some(code) = status.code() {
-                    session.channel_state().unwrap().as_mut().send_exit_status(code).unwrap();
+                    channel.as_mut().send_exit_status(code).unwrap();
                 }
-
-                session.close_channel();
-                break;
+                // Send close message but keep channel alive for flushing
+                channel.as_mut().send_close().unwrap();
+                channel_closed = true;
             }
         }
 
         if let Some(mut channel) = session.channel_state()
             && channel.as_mut().writable()
         {
-            if buf_stdout_len > 0 {
-                let n = channel
-                    .as_mut()
-                    .write(&buf_stdout[..buf_stdout_len], false)
-                    .unwrap();
-
-                buf_stdout_len -= n;
+            if !buf_stdout.is_empty() {
+                let slice = buf_stdout.readable_slice();
+                match channel.as_mut().write(slice, false) {
+                    Ok(n) => buf_stdout.advance_read(n),
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+                    Err(_) => break,
+                }
             }
 
-            if buf_stderr_len > 0 {
-                let n = channel
-                    .as_mut()
-                    .write(&buf_stderr[..buf_stderr_len], true)
-                    .unwrap();
-
-                buf_stderr_len -= n;
+            if !buf_stderr.is_empty() {
+                let slice = buf_stderr.readable_slice();
+                match channel.as_mut().write(slice, true) {
+                    Ok(n) => buf_stderr.advance_read(n),
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+                    Err(e) => {
+                        eprintln!("channel stderr write error: {:?}", e);
+                        break;
+                    }
+                }
             }
         }
     }
