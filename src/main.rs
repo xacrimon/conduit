@@ -42,13 +42,13 @@ async fn run() -> Result<()> {
     info!("conduit {}", VERSION);
     libssh::init();
     let config = Config::load(None).await?;
-    let (ct, tt) = signal::bind();
+    let (cancel_token, task_tracker) = signal::bind();
     let db = db::connect(&config.database).await?;
     let state = AppState::new(AppStateInner {
         db,
         config,
-        cancel_token: ct.clone(),
-        task_tracker: tt.clone(),
+        cancel_token,
+        task_tracker,
     });
 
     metrics::get();
@@ -67,10 +67,10 @@ async fn run() -> Result<()> {
         .with_state(state.clone());
 
     {
-        let signal = ct.clone().cancelled_owned();
+        let signal = state.cancel_token.clone().cancelled_owned();
         let addr = format!("{}:{}", state.config.http.host, state.config.http.port);
 
-        tt.spawn(async move {
+        state.task_tracker.spawn(async move {
             let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
             info!("http server worker starting on {}", addr);
             if let Err(err) = axum::serve(listener, app)
@@ -83,17 +83,15 @@ async fn run() -> Result<()> {
     }
 
     {
-        let ct = ct.clone();
-        let tt2 = tt.clone();
         let addr = state.config.ssh.host.clone();
-        let state = state.clone();
+        let state2 = state.clone();
 
-        tt.spawn(async move {
-            let host_key = fs::read_to_string(&state.config.ssh.host_key)
+        state.task_tracker.spawn(async move {
+            let host_key = fs::read_to_string(&state2.config.ssh.host_key)
                 .await
                 .unwrap();
 
-            let mut listener = libssh::Listener::bind(&host_key, &addr, state.config.ssh.port)
+            let mut listener = libssh::Listener::bind(&host_key, &addr, state2.config.ssh.port)
                 .await
                 .unwrap();
 
@@ -101,16 +99,15 @@ async fn run() -> Result<()> {
 
             loop {
                 tokio::select! {
-                    _ = ct.cancelled() => break,
+                    _ = state2.cancel_token.cancelled() => break,
                     session = listener.accept() => {
                         let session = session.unwrap();
-                        let state = state.clone();
-                        let ct = ct.clone();
+                        let state3 = state2.clone();
 
-                        tt2.spawn(async move {
+                        state2.task_tracker.spawn(async move {
                             debug!("accepted ssh connection");
 
-                            if let Err(err) = ssh::handle_session(&state, session, ct).await {
+                            if let Err(err) = ssh::handle_session(&state3, session, state3.cancel_token.clone()).await {
                                 error!("ssh session error: {}", err);
                             }
                         });
@@ -120,7 +117,7 @@ async fn run() -> Result<()> {
         });
     }
 
-    tt.wait().await;
+    state.task_tracker.wait().await;
     state.db.close().await;
     libssh::finalize();
     Ok(())
