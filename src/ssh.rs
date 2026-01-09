@@ -40,7 +40,7 @@ pub async fn handle_session(
     let mut buf_stderr = [0u8; 32];
     let mut buf_stderr_len = 0;
 
-    'outer: loop {
+    loop {
         select! {
             _ = &mut cancel => break,
             res = session.wait() => {
@@ -88,7 +88,6 @@ pub async fn handle_session(
                     }
                 }
 
-                // TODO: continue processing events?
                 if close_channel {
                     session.close_channel();
                 }
@@ -116,16 +115,16 @@ pub async fn handle_session(
 
                 buf_stderr_len = n;
             }
-            status = unwrap_await(child.as_mut().map(|child| child.wait())), if child.is_some() && buf_stdout_len == 0 && buf_stderr_len == 0 => {
+            status = unwrap_await(child.as_mut().map(|child| child.wait())), if child.is_some() && stdout.is_none() && stderr.is_none() && buf_stdout_len == 0 && buf_stderr_len == 0 => {
                 let status = status.unwrap();
-                child = None;
                 debug!("child exited: {:?}", status);
 
                 if let Some(code) = status.code() {
                     session.channel_state().unwrap().as_mut().send_exit_status(code).unwrap();
                 }
 
-                // TODO: handle exit signal
+                session.close_channel();
+                break;
             }
         }
 
