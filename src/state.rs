@@ -5,12 +5,16 @@ use std::sync::Arc;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use sqlx::PgPool;
+use tokio_util::sync::CancellationToken;
+use tokio_util::task::TaskTracker;
 
 use crate::config::Config;
 
 pub struct AppStateInner {
     pub db: PgPool,
     pub config: Config,
+    pub cancel_token: CancellationToken,
+    pub task_tracker: TaskTracker,
 }
 
 #[derive(Clone)]

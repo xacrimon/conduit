@@ -4,7 +4,7 @@ use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UserId(pub(super) i32);
 
 #[derive(Debug, Clone)]

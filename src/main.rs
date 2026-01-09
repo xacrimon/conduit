@@ -44,7 +44,13 @@ async fn run() -> Result<()> {
     let config = Config::load(None).await?;
     let (ct, tt) = signal::bind();
     let db = db::connect(&config.database).await?;
-    let state = AppState::new(AppStateInner { db, config });
+    let state = AppState::new(AppStateInner {
+        db,
+        config,
+        cancel_token: ct.clone(),
+        task_tracker: tt.clone(),
+    });
+
     metrics::get();
 
     let middleware = ServiceBuilder::new()
