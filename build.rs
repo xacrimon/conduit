@@ -53,6 +53,10 @@ fn generate_css() {
     }
 
     Command::new("tailwindcss").args(&args).status().unwrap();
+
+    let css_data = std::fs::read(&css_path).unwrap();
+    let css_asset_name = compute_asset_name("index", "css", &css_data);
+    println!("cargo:rustc-env=CONDUIT_CSS_ASSET_NAME={}", css_asset_name);
 }
 
 fn compute_asset_name(name: &str, extension: &str, data: &[u8]) -> String {

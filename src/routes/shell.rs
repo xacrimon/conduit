@@ -1,4 +1,5 @@
 use crate::middleware::auth::Session;
+use crate::routes::assets;
 
 pub fn document<S: Into<Option<Session>>>(
     markup: maud::Markup,
@@ -30,7 +31,7 @@ fn document_impl(
             head {
                 meta charset="UTF-8";
                 meta name="viewport" content="width=device-width, initial-scale=1.0";
-                link rel="stylesheet" href="/assets/index.css";
+                link rel="stylesheet" href={ "/assets/" (assets::CSS_ASSET_NAME) };
                 (scripts())
                 (extra)
                 title { (title) " - conduit" }
