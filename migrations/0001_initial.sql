@@ -10,6 +10,7 @@ CREATE TABLE user_keys (
     username text not null,
     hostname text not null,
     user_id integer not null references users(id),
+    name text not null,
     primary key (type, encoded)
 );
 

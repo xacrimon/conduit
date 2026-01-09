@@ -85,3 +85,82 @@ pub async fn get_all_ssh_keys(db: &PgPool) -> Result<Vec<(String, String)>> {
         .map(|r| (r.encoded, r.username))
         .collect())
 }
+
+#[derive(Debug, Clone)]
+pub struct UserKey {
+    pub key_type: String,
+    pub encoded: String,
+    pub username: String,
+    pub hostname: String,
+    pub name: String,
+}
+
+/// Get all SSH keys for a specific user
+pub async fn get_user_keys(db: &PgPool, user_id: UserId) -> Result<Vec<UserKey>> {
+    let records = sqlx::query!(
+        r#"
+        SELECT type, encoded, username, hostname, name
+        FROM user_keys
+        WHERE user_id = $1
+        ORDER BY name
+        "#,
+        user_id.0
+    )
+    .fetch_all(db)
+    .await?;
+
+    Ok(records
+        .into_iter()
+        .map(|r| UserKey {
+            key_type: r.r#type,
+            encoded: r.encoded,
+            username: r.username,
+            hostname: r.hostname,
+            name: r.name,
+        })
+        .collect())
+}
+
+/// Add a new SSH key for a user
+pub async fn add_user_key(
+    db: &PgPool,
+    user_id: UserId,
+    key_type: &str,
+    encoded: &str,
+    username: &str,
+    hostname: &str,
+    name: &str,
+) -> Result<()> {
+    sqlx::query!(
+        r#"
+        INSERT INTO user_keys (type, encoded, username, hostname, user_id, name)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        "#,
+        key_type,
+        encoded,
+        username,
+        hostname,
+        user_id.0,
+        name
+    )
+    .execute(db)
+    .await?;
+
+    Ok(())
+}
+
+/// Delete an SSH key
+pub async fn delete_user_key(db: &PgPool, key_type: &str, encoded: &str) -> Result<()> {
+    sqlx::query!(
+        r#"
+        DELETE FROM user_keys
+        WHERE type = $1 AND encoded = $2
+        "#,
+        key_type,
+        encoded
+    )
+    .execute(db)
+    .await?;
+
+    Ok(())
+}
