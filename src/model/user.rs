@@ -18,10 +18,12 @@ pub async fn create(db: &PgPool, username: &str, email: &str, password: &str) ->
     let password_hash = hash_password(password);
 
     sqlx::query!(
-        "INSERT INTO users (username, email, password_hash, created_at) VALUES ($1, $2, $3, now())",
+        "INSERT INTO users (username, email, password_hash, created_at, display_name, biography) VALUES ($1, $2, $3, now(), $4, $5)",
         username,
         email,
         password_hash,
+        username,
+        "",
     )
     .execute(db)
     .await?;
@@ -66,6 +68,50 @@ fn hash_password(password: &str) -> String {
     let password_hash_bytes = Sha256::digest(password.as_bytes());
     let password_hash = BASE64_STANDARD.encode(password_hash_bytes);
     password_hash
+}
+
+#[derive(Debug, Clone)]
+pub struct UserProfile {
+    pub username: String,
+    pub email: String,
+    pub display_name: String,
+    pub biography: String,
+}
+
+pub async fn get_profile(db: &PgPool, user_id: UserId) -> Result<Option<UserProfile>> {
+    let record = sqlx::query!(
+        "SELECT username, email, display_name, biography FROM users WHERE id = $1",
+        user_id.0,
+    )
+    .fetch_optional(db)
+    .await?;
+
+    Ok(record.map(|r| UserProfile {
+        username: r.username,
+        email: r.email,
+        display_name: r.display_name,
+        biography: r.biography,
+    }))
+}
+
+pub async fn update_profile(
+    db: &PgPool,
+    user_id: UserId,
+    email: &str,
+    display_name: &str,
+    biography: &str,
+) -> Result<()> {
+    sqlx::query!(
+        "UPDATE users SET email = $1, display_name = $2, biography = $3 WHERE id = $4",
+        email,
+        display_name,
+        biography,
+        user_id.0,
+    )
+    .execute(db)
+    .await?;
+
+    Ok(())
 }
 
 /// Load all SSH keys with their associated usernames.

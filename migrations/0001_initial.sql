@@ -3,7 +3,9 @@ CREATE TABLE users (
     username text not null unique,
     email text not null unique,
     password_hash text not null,
-    created_at timestamptz not null
+    created_at timestamptz not null,
+    display_name text not null,
+    biography text not null
 );
 
 CREATE TABLE user_keys (
