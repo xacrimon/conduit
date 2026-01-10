@@ -111,6 +111,16 @@ async fn batch(
         return Ok((StatusCode::BAD_REQUEST, "unsupported operation").into_response());
     }
 
+    // Extract auth header to pass through to action links
+    let auth_header = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| {
+            let mut h = HashMap::new();
+            h.insert("Authorization".to_string(), s.to_string());
+            h
+        });
+
     let mut objects = Vec::with_capacity(request.objects.len());
     for object in request.objects {
         let Some(oid) = normalize_oid(&object.oid) else {
@@ -142,7 +152,7 @@ async fn batch(
                                     &repo,
                                     &oid,
                                 ),
-                                header: None,
+                                header: auth_header.clone(),
                                 expires_in: None,
                             }),
                             upload: None,
@@ -183,12 +193,12 @@ async fn batch(
                                     &repo,
                                     &oid,
                                 ),
-                                header: None,
+                                header: auth_header.clone(),
                                 expires_in: None,
                             }),
                             verify: Some(LfsLink {
                                 href: lfs_verify_href(&state.config.http.public_url, &user, &repo),
-                                header: None,
+                                header: auth_header.clone(),
                                 expires_in: None,
                             }),
                         }),
@@ -370,11 +380,11 @@ fn normalize_oid(oid: &str) -> Option<String> {
 }
 
 fn lfs_object_href(public_url: &str, user: &str, repo: &str, oid: &str) -> String {
-    format!("{public_url}/{user}/{repo}/info/lfs/objects/{oid}")
+    format!("{public_url}/~{user}/{repo}/info/lfs/objects/{oid}")
 }
 
 fn lfs_verify_href(public_url: &str, user: &str, repo: &str) -> String {
-    format!("{public_url}/{user}/{repo}/info/lfs/objects/verify")
+    format!("{public_url}/~{user}/{repo}/info/lfs/objects/verify")
 }
 
 fn lfs_object_path(state: &AppState, user: &str, repo: &str, oid: &str) -> PathBuf {
