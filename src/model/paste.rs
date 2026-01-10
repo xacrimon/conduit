@@ -22,6 +22,62 @@ pub struct File {
     pub content: String,
 }
 
+pub struct PasteInfo {
+    pub id: String,
+    pub visibility: String,
+    pub filename: String,
+}
+
+pub struct PasteWithFile {
+    pub id: String,
+    pub visibility: String,
+    pub filename: String,
+    pub content: String,
+}
+
+pub async fn get_user_pastes(db: &PgPool, user_id: UserId) -> Result<Vec<PasteInfo>> {
+    let pastes = sqlx::query_as!(
+        PasteInfo,
+        "SELECT p.id, p.visibility, pf.filename
+         FROM pastes p
+         JOIN paste_files pf ON p.id = pf.paste_id
+         WHERE p.user_id = $1
+         ORDER BY p.id DESC",
+        user_id.0
+    )
+    .fetch_all(db)
+    .await?;
+
+    Ok(pastes)
+}
+
+pub async fn get_paste(db: &PgPool, paste_id: &str) -> Result<Option<PasteWithFile>> {
+    let paste = sqlx::query_as!(
+        PasteWithFile,
+        "SELECT p.id, p.visibility, pf.filename, pf.content
+         FROM pastes p
+         JOIN paste_files pf ON p.id = pf.paste_id
+         WHERE p.id = $1",
+        paste_id
+    )
+    .fetch_optional(db)
+    .await?;
+
+    Ok(paste)
+}
+
+pub async fn delete_paste(db: &PgPool, user_id: UserId, paste_id: &str) -> Result<()> {
+    sqlx::query!(
+        "DELETE FROM pastes WHERE id = $1 AND user_id = $2",
+        paste_id,
+        user_id.0
+    )
+    .execute(db)
+    .await?;
+
+    Ok(())
+}
+
 pub async fn create_paste(
     db: &PgPool,
     user_id: UserId,
