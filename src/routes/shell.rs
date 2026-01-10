@@ -64,8 +64,8 @@ fn header(session: &Option<Session>) -> maud::Markup {
             }
             @if let Some(session) = session {
                 ul .flex .grow .ms-12 .gap-8 {
-                    li { a .hover:underline href="/paste" { "paste" } }
-                    li { a .hover:underline href="/meta" { "meta" } }
+                    li { a .text-gray-500 .hover:text-gray-700 href="/paste" { "paste" } }
+                    li { a .text-gray-500 .hover:text-gray-700 href="/meta" { "meta" } }
                 }
 
                 div {

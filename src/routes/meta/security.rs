@@ -11,7 +11,7 @@ pub fn routes() -> Router<AppState> {
 
 async fn page_security(session: Session) -> maud::Markup {
     let markup = maud::html! {
-        (super::meta_nav())
+        (super::meta_nav("security"))
     };
 
     shell::document(markup, "security", session)

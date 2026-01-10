@@ -18,14 +18,51 @@ pub fn routes() -> Router<AppState> {
         .route("/meta", get(meta_redirect))
 }
 
-fn meta_nav() -> maud::Markup {
+fn meta_nav(current: &str) -> maud::Markup {
+    let items = [
+        ("profile", "/meta/profile"),
+        ("account", "/meta/account"),
+        ("keys", "/meta/keys"),
+        ("security", "/meta/security"),
+    ];
+
     maud::html! {
-        div {
-            ul .flex .gap-4 {
-                li { a .hover:underline href="/meta/profile" { "profile" } }
-                li { a .hover:underline href="/meta/account" { "account" } }
-                li { a .hover:underline href="/meta/keys" { "keys" } }
-                li { a .hover:underline href="/meta/security" { "security" } }
+        div .border-b .border-gray-300 .mb-3 {
+            ul .flex .gap-1 .text-sm {
+                @for (name, href) in items {
+                    @if name == current {
+                        li {
+                            a
+                                .block
+                                .px-2
+                                .py-1
+                                .bg-gray-200
+                                .text-black
+                                .border
+                                .border-gray-300
+                                href=(href)
+                            {
+                                (name)
+                            }
+                        }
+                    } @else {
+                        li {
+                            a
+                                .block
+                                .px-2
+                                .py-1
+                                .text-gray-600
+                                .hover:text-black
+                                .hover:bg-gray-100
+                                .border
+                                .border-transparent
+                                href=(href)
+                            {
+                                (name)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -21,7 +21,7 @@ async fn page_profile(state: AppState, session: Session) -> Result<Response, App
         .ok_or_else(|| anyhow::anyhow!("User not found"))?;
 
     let markup = maud::html! {
-        (super::meta_nav())
+        (super::meta_nav("profile"))
 
         h2 .text-xl .mt-4 .mb-4 { "Edit your profile" }
 

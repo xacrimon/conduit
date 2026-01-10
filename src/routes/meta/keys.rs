@@ -20,7 +20,7 @@ async fn page_keys(state: AppState, session: Session) -> Result<Response, AppErr
     let keys = model::user::get_user_keys(&state.db, session.id).await?;
 
     let markup = maud::html! {
-        (super::meta_nav())
+        (super::meta_nav("keys"))
 
         h2 .text-xl .mt-4 .mb-2 { "SSH Keys" }
 
