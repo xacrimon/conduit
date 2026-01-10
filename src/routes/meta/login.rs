@@ -23,14 +23,56 @@ async fn page_login(session: Option<Session>) -> Response {
     }
 
     let markup = maud::html! {
-        form method="post" {
-            label for="username" { "Username" }
-            input .border-solid .border-1 type="text" name="username" required;
+        div .max-w-md {
+            h2 .text-xl .mb-4 { "Log In" }
 
-            label for="password" { "Password" }
-            input .border-solid .border-1 type="password" name="password" required;
+            form method="post" {
+                div .mb-3 {
+                    label for="username" .block .mb-1 { "Username" }
+                    input
+                        .border-solid
+                        .border-1
+                        .border-gray-300
+                        .w-full
+                        .p-2
+                        type="text"
+                        name="username"
+                        required;
+                }
 
-            input .text-neutral-50 .bg-blue-500 .border-neutral-700 .border-solid .border-1 type="submit" value="Log in";
+                div .mb-3 {
+                    label for="password" .block .mb-1 { "Password" }
+                    input
+                        .border-solid
+                        .border-1
+                        .border-gray-300
+                        .w-full
+                        .p-2
+                        type="password"
+                        name="password"
+                        required;
+                }
+
+                div .mt-4 {
+                    input
+                        .text-neutral-50
+                        .bg-blue-500
+                        .hover:bg-blue-600
+                        .border-neutral-700
+                        .border-solid
+                        .border-1
+                        .px-4
+                        .py-2
+                        .cursor-pointer
+                        type="submit"
+                        value="Log In";
+                }
+            }
+
+            p .mt-6 .text-gray-600 {
+                "Don't have an account? "
+                a .text-blue-600 .hover:underline href="/register" { "Register" }
+            }
         }
     };
 
