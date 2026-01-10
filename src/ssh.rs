@@ -11,7 +11,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::debug;
 
 use crate::config::Config;
-use crate::libssh::{ChannelEvent, Session};
+use crate::libssh::{ChannelEvent, ChannelStateExt, Session};
 use crate::model;
 use crate::state::AppState;
 use crate::utils::{RingBuf, re};
@@ -61,7 +61,7 @@ pub async fn handle_session(
                 let mut close_channel = false;
 
                 if let Some(mut channel_state) = session.channel_state() {
-                    'inner: while let Some(event) = channel_state.as_mut().events().pop_front() {
+                    'inner: while let Some(event) = channel_state.events().pop_front() {
                         match event {
                             ChannelEvent::ExeqRequest { command } => {
                                 assert!(child.is_none());
@@ -112,7 +112,7 @@ pub async fn handle_session(
                     debug!("stdout EOF");
                     drop(stdout.take()); // close stdout
 
-                    let channel_state = session.channel_state().unwrap();
+                    let mut channel_state = session.channel_state().unwrap();
                     channel_state.send_eof().unwrap();
                 } else {
                     buf_stdout.advance_write(n);
@@ -134,20 +134,20 @@ pub async fn handle_session(
 
                 let mut channel = session.channel_state().unwrap();
                 if let Some(code) = status.code() {
-                    channel.as_mut().send_exit_status(code).unwrap();
+                    channel.send_exit_status(code).unwrap();
                 }
                 // Send close message but keep channel alive for flushing
-                channel.as_mut().send_close().unwrap();
+                channel.send_close().unwrap();
                 channel_closed = true;
             }
         }
 
         if let Some(mut channel) = session.channel_state()
-            && channel.as_mut().writable()
+            && channel.writable()
         {
             if !buf_stdout.is_empty() {
                 let slice = buf_stdout.readable_slice();
-                match channel.as_mut().write(slice, false) {
+                match channel.write(slice, false) {
                     Ok(n) => buf_stdout.advance_read(n),
                     Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
                     Err(_) => break,
@@ -156,7 +156,7 @@ pub async fn handle_session(
 
             if !buf_stderr.is_empty() {
                 let slice = buf_stderr.readable_slice();
-                match channel.as_mut().write(slice, true) {
+                match channel.write(slice, true) {
                     Ok(n) => buf_stderr.advance_read(n),
                     Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
                     Err(e) => {

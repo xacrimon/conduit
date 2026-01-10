@@ -1,7 +1,7 @@
 use std::ffi::{CStr, c_char, c_int, c_void};
 use std::os::fd::AsRawFd;
 use std::os::unix::io::RawFd;
-use std::pin::Pin;
+use std::pin::{Pin, UnsafePinned};
 use std::{marker, mem, ptr};
 
 use libssh_rs_sys as libssh;
@@ -12,7 +12,16 @@ use crate::libssh::channel::ChannelState;
 use crate::libssh::error;
 
 pub struct Session {
-    handle: AsyncFd<Pin<Box<Handle>>>,
+    handle: AsyncFd<HandleBox>,
+}
+
+struct HandleBox(Pin<Box<UnsafePinned<Handle>>>);
+
+impl AsRawFd for HandleBox {
+    fn as_raw_fd(&self) -> RawFd {
+        let handle = unsafe { &*self.0.as_ref().get_ref().get() };
+        unsafe { libssh::ssh_get_fd(handle.session) }
+    }
 }
 
 impl Session {
@@ -20,20 +29,35 @@ impl Session {
         let handle = Handle::new(session).unwrap();
 
         Self {
-            handle: AsyncFd::new(handle).unwrap(),
+            handle: AsyncFd::new(HandleBox(handle)).unwrap(),
         }
     }
 
-    pub fn configure(&mut self) {
-        let handle = self.handle.get_mut();
+    fn handle_mut(&mut self) -> &mut Handle {
+        unsafe {
+            &mut *self
+                .handle
+                .get_mut()
+                .0
+                .as_mut()
+                .get_unchecked_mut()
+                .get_mut_unchecked()
+        }
+    }
 
+    fn handle_ref(&self) -> &Handle {
+        unsafe { &*self.handle.get_ref().0.as_ref().get_ref().get() }
+    }
+
+    pub fn configure(&mut self) {
+        let handle = self.handle_mut();
         unsafe {
             libssh::ssh_set_auth_methods(handle.session, libssh::SSH_AUTH_METHOD_PUBLICKEY as i32);
         }
     }
 
     pub fn allowed_keys(&mut self, keys: Vec<(String, String)>) {
-        *self.handle.get_mut().as_mut().keys() = keys;
+        self.handle_mut().keys = keys;
     }
 
     pub async fn handle_key_exchange(&mut self) -> io::Result<()> {
@@ -44,7 +68,7 @@ impl Session {
                 .await
                 .unwrap();
 
-            let handle = guard.get_inner();
+            let handle = unsafe { &*guard.get_inner().0.as_ref().get_ref().get() };
 
             match unsafe { libssh::ssh_handle_key_exchange(handle.session) } {
                 error::SSH_OK => break,
@@ -54,7 +78,7 @@ impl Session {
             }
         }
 
-        let handle = self.handle.get_ref();
+        let handle = self.handle_ref();
 
         unsafe {
             let rc = libssh::ssh_event_add_session(handle.ssh_event, handle.session);
@@ -78,49 +102,58 @@ impl Session {
                 continue;
             }
 
-            let handle = guard.get_inner_mut();
+            // UnsafePinned allows this reference to alias with callback pointers
+            let handle = unsafe {
+                &mut *guard
+                    .get_inner_mut()
+                    .0
+                    .as_mut()
+                    .get_unchecked_mut()
+                    .get_mut_unchecked()
+            };
 
-            match handle.as_mut().process_events() {
-                Ok(()) => (),
-                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                    // TODO: is this correct?
-                    // https://github.com/libssh/libssh-mirror/blob/ac6d2fad4a8bf07277127736367e90387646363f/src/socket.c#L294
+            let rc = unsafe { libssh::ssh_event_dopoll(handle.ssh_event, 0) };
+
+            match rc {
+                error::SSH_OK => (),
+                error::SSH_AGAIN => {
                     guard.clear_ready();
                     break Ok(());
                 }
-                Err(e) => break Err(e),
+                error::SSH_ERROR => {
+                    break Err(error::libssh(handle.session as _));
+                }
+                _ => unreachable!(),
             }
         }
     }
 
-    pub fn channel_state(&mut self) -> Option<Pin<&mut ChannelState>> {
-        let handle = self.handle.get_mut().as_mut();
-        handle.channel().as_mut().map(|c| c.as_mut())
+    pub fn channel_state(&mut self) -> Option<Pin<&mut UnsafePinned<ChannelState>>> {
+        let handle = self.handle_mut();
+        handle.channel.as_mut().map(|c| c.as_mut())
     }
 
     pub fn close_channel(&mut self) {
-        let handle = self.handle.get_mut().as_mut();
-        handle.close_channel();
+        self.handle_mut().channel.take();
     }
 
     pub fn authenticated_user(&self) -> Option<&str> {
-        self.handle.get_ref().authenticated_user.as_deref()
+        self.handle_ref().authenticated_user.as_deref()
     }
 }
 
-// TODO: needs https://doc.rust-lang.org/std/pin/struct.UnsafePinned.html
 struct Handle {
     session: libssh::ssh_session,
     ssh_event: libssh::ssh_event,
     callbacks: libssh::ssh_server_callbacks_struct,
     keys: Vec<(String, String)>,
     authenticated_user: Option<String>,
-    channel: Option<Pin<Box<ChannelState>>>,
+    channel: Option<Pin<Box<UnsafePinned<ChannelState>>>>,
     _pinned: marker::PhantomPinned,
 }
 
 impl Handle {
-    fn new(session: libssh::ssh_session) -> io::Result<Pin<Box<Self>>> {
+    fn new(session: libssh::ssh_session) -> io::Result<Pin<Box<UnsafePinned<Self>>>> {
         let ssh_event = unsafe { libssh::ssh_event_new() };
 
         let callbacks = libssh::ssh_server_callbacks_struct {
@@ -139,7 +172,7 @@ impl Handle {
             gssapi_verify_mic_function: None,
         };
 
-        let mut handle = Box::pin(Self {
+        let mut handle = Box::pin(UnsafePinned::new(Self {
             session,
             ssh_event,
             callbacks,
@@ -147,44 +180,19 @@ impl Handle {
             authenticated_user: None,
             channel: None,
             _pinned: marker::PhantomPinned,
-        });
+        }));
 
         unsafe {
-            handle.as_mut().get_unchecked_mut().callbacks.userdata = &*handle as *const _ as _;
+            let handle_ref = &mut *handle.as_mut().get_unchecked_mut().get_mut_unchecked();
+            handle_ref.callbacks.userdata = handle_ref as *mut _ as *mut c_void;
         }
 
         unsafe {
-            libssh::ssh_set_server_callbacks(session, &handle.callbacks as *const _ as _);
+            let handle_ref = &*handle.as_ref().get_ref().get();
+            libssh::ssh_set_server_callbacks(session, &handle_ref.callbacks as *const _ as _);
         }
 
         Ok(handle)
-    }
-
-    fn process_events(self: Pin<&mut Self>) -> io::Result<()> {
-        let rc = unsafe { libssh::ssh_event_dopoll(self.ssh_event, 0) };
-
-        match rc {
-            error::SSH_OK => Ok(()),
-            error::SSH_AGAIN => Err(io::ErrorKind::WouldBlock.into()),
-            error::SSH_ERROR => Err(error::libssh(self.session as _)),
-            _ => unreachable!(),
-        }
-    }
-
-    fn close_channel(self: Pin<&mut Self>) {
-        self.channel().take();
-    }
-
-    fn keys(self: Pin<&mut Self>) -> &mut Vec<(String, String)> {
-        unsafe { &mut self.get_unchecked_mut().keys }
-    }
-
-    fn authenticated_user(self: Pin<&mut Self>) -> &mut Option<String> {
-        unsafe { &mut self.get_unchecked_mut().authenticated_user }
-    }
-
-    fn channel(self: Pin<&mut Self>) -> &mut Option<Pin<Box<ChannelState>>> {
-        unsafe { &mut self.get_unchecked_mut().channel }
     }
 
     unsafe extern "C" fn callback_auth_pubkey(
@@ -194,64 +202,59 @@ impl Handle {
         signature_state: c_char,
         userdata: *mut c_void,
     ) -> c_int {
-        let handle_ptr = userdata as *mut Handle;
-        let handle = unsafe { Pin::new_unchecked(&mut *handle_ptr) };
-
-        const SSH_PUBLICKEY_STATE_NONE: c_char =
-            libssh::ssh_publickey_state_e::SSH_PUBLICKEY_STATE_NONE as _;
-
-        const SSH_PUBLICKEY_STATE_VALID: c_char =
-            libssh::ssh_publickey_state_e::SSH_PUBLICKEY_STATE_VALID as _;
-
-        // TODO: ??? https://github.com/libssh/libssh-mirror/blob/ac6d2fad4a8bf07277127736367e90387646363f/examples/ssh_server.c#L572
-        if signature_state == SSH_PUBLICKEY_STATE_NONE {
-            return libssh::ssh_auth_e_SSH_AUTH_SUCCESS;
-        }
-
-        if signature_state != SSH_PUBLICKEY_STATE_VALID {
-            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
-        }
-
-        let maybe_username = unsafe { CStr::from_ptr(username).to_str() };
-        let Ok(username) = maybe_username else {
-            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
-        };
-
-        if username != "git" {
-            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
-        }
-
-        // TODO: configure SSH_BIND_OPTIONS_PUBKEY_ACCEPTED_KEY_TYPES
-        let ty = unsafe { libssh::ssh_key_type(pubkey) };
-        if ty != libssh::ssh_keytypes_e_SSH_KEYTYPE_ED25519 {
-            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
-        }
-
-        let mut pubkey_buf: *mut c_char = ptr::null_mut();
-
         unsafe {
+            let handle = &mut *(userdata as *mut Handle);
+
+            const SSH_PUBLICKEY_STATE_NONE: c_char =
+                libssh::ssh_publickey_state_e::SSH_PUBLICKEY_STATE_NONE as _;
+
+            const SSH_PUBLICKEY_STATE_VALID: c_char =
+                libssh::ssh_publickey_state_e::SSH_PUBLICKEY_STATE_VALID as _;
+
+            if signature_state == SSH_PUBLICKEY_STATE_NONE {
+                return libssh::ssh_auth_e_SSH_AUTH_SUCCESS;
+            }
+
+            if signature_state != SSH_PUBLICKEY_STATE_VALID {
+                return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+            }
+
+            let maybe_username = CStr::from_ptr(username).to_str();
+            let Ok(username) = maybe_username else {
+                return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+            };
+
+            if username != "git" {
+                return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+            }
+
+            let ty = libssh::ssh_key_type(pubkey);
+            if ty != libssh::ssh_keytypes_e_SSH_KEYTYPE_ED25519 {
+                return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+            }
+
+            let mut pubkey_buf: *mut c_char = ptr::null_mut();
+
             let rc = libssh::ssh_pki_export_pubkey_base64(pubkey, &mut pubkey_buf);
             if rc != error::SSH_OK {
                 return libssh::ssh_auth_e_SSH_AUTH_DENIED;
             }
-        }
 
-        let maybe_pubkey = unsafe { CStr::from_ptr(pubkey_buf).to_str() };
-        let Ok(pubkey) = maybe_pubkey.map(ToOwned::to_owned) else {
-            return libssh::ssh_auth_e_SSH_AUTH_DENIED;
-        };
+            let maybe_pubkey = CStr::from_ptr(pubkey_buf).to_str();
+            let Ok(pubkey) = maybe_pubkey.map(ToOwned::to_owned) else {
+                return libssh::ssh_auth_e_SSH_AUTH_DENIED;
+            };
 
-        unsafe {
             libssh::ssh_string_free_char(pubkey_buf);
-        }
 
-        let entry = handle.keys.iter().find(|(key, _)| key == &pubkey);
-        if let Some((_, username)) = entry {
-            *handle.authenticated_user() = Some(username.clone());
-            return libssh::ssh_auth_e_SSH_AUTH_SUCCESS;
-        }
+            let entry = handle.keys.iter().find(|(key, _)| key == &pubkey);
+            if let Some((_, username)) = entry {
+                handle.authenticated_user = Some(username.clone());
+                return libssh::ssh_auth_e_SSH_AUTH_SUCCESS;
+            }
 
-        libssh::ssh_auth_e_SSH_AUTH_DENIED
+            libssh::ssh_auth_e_SSH_AUTH_DENIED
+        }
     }
 
     unsafe extern "C" fn callback_service_request_function(
@@ -259,14 +262,16 @@ impl Handle {
         service: *const c_char,
         _userdata: *mut c_void,
     ) -> c_int {
-        let maybe_service = unsafe { CStr::from_ptr(service).to_str() };
-        let Ok(service) = maybe_service else {
-            return -1;
-        };
+        unsafe {
+            let maybe_service = CStr::from_ptr(service).to_str();
+            let Ok(service) = maybe_service else {
+                return -1;
+            };
 
-        match service {
-            "ssh-userauth" => 0,
-            _ => -1,
+            match service {
+                "ssh-userauth" => 0,
+                _ => -1,
+            }
         }
     }
 
@@ -274,22 +279,17 @@ impl Handle {
         _ssh_session: libssh::ssh_session,
         userdata: *mut c_void,
     ) -> libssh::ssh_channel {
-        let handle_ptr = userdata as *mut Handle;
-        let handle = unsafe { Pin::new_unchecked(&mut *handle_ptr) };
+        unsafe {
+            let handle = &mut *(userdata as *mut Handle);
 
-        if handle.channel.is_some() {
-            return ptr::null_mut();
+            if handle.channel.is_some() {
+                return ptr::null_mut();
+            }
+
+            let channel = libssh::ssh_channel_new(handle.session);
+            handle.channel = Some(ChannelState::new(channel));
+            channel
         }
-
-        let channel = unsafe { libssh::ssh_channel_new(handle.session) };
-        *handle.channel() = Some(ChannelState::new(channel));
-        channel
-    }
-}
-
-impl AsRawFd for Pin<Box<Handle>> {
-    fn as_raw_fd(&self) -> RawFd {
-        unsafe { libssh::ssh_get_fd(self.session) }
     }
 }
 
