@@ -1,8 +1,5 @@
 mod keys;
-mod login;
-mod logout;
 mod profile;
-mod register;
 
 use axum::Router;
 use axum::response::Redirect;
@@ -12,9 +9,6 @@ use crate::state::AppState;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .merge(login::routes())
-        .merge(logout::routes())
-        .merge(register::routes())
         .merge(profile::routes())
         .merge(keys::routes())
         .route("/meta", get(meta_redirect))

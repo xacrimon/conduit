@@ -3,6 +3,7 @@ mod assets;
 mod autoreload;
 mod error;
 mod hub;
+mod login;
 mod meta;
 mod paste;
 mod shell;
@@ -24,6 +25,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .merge(assets::routes())
         .merge(autoreload)
+        .merge(login::routes())
         .merge(hub::routes())
         .merge(meta::routes())
         .merge(paste::routes())
