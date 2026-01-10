@@ -25,6 +25,9 @@ async fn page_register(session: Option<Session>) -> Response {
             label for="username" { "Username" }
             input .border-solid .border-1 type="text" name="username" required;
 
+            label for="username" { "Email" }
+            input .border-solid .border-1 type="text" name="email" required;
+
             label for="password" { "Password" }
             input .border-solid .border-1 type="password" name="password" required;
 
@@ -38,14 +41,20 @@ async fn page_register(session: Option<Session>) -> Response {
 #[derive(Deserialize)]
 struct Register {
     username: String,
+    email: String,
     password: String,
 }
 
+// TODO: form input validation
 async fn do_register(
     state: AppState,
     Form(register): Form<Register>,
 ) -> Result<Redirect, AppError> {
-    let Register { username, password } = register;
-    model::user::create(&state.db, &username, &password).await?;
+    let Register {
+        username,
+        email,
+        password,
+    } = register;
+    model::user::create(&state.db, &username, &email, &password).await?;
     Ok(Redirect::to("/login"))
 }

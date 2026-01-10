@@ -1,7 +1,9 @@
 CREATE TABLE users (
     id integer primary key generated always as identity,
     username text not null unique,
-    password_hash text not null
+    email text not null unique,
+    password_hash text not null,
+    created_at timestamptz not null
 );
 
 CREATE TABLE user_keys (

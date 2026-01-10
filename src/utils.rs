@@ -118,11 +118,17 @@ impl RingBuf {
         self.read_pos == self.write_pos
     }
 
-    pub fn writable_slice(&mut self) -> &mut [u8] {
-        let size = self.buf.len();
+    pub fn size(&self) -> usize {
+        self.buf.len()
+    }
 
+    pub fn writable_slice(&mut self) -> &mut [u8] {
         if self.write_pos >= self.read_pos {
-            let end = if self.read_pos == 0 { size - 1 } else { size };
+            let end = if self.read_pos == 0 {
+                self.size() - 1
+            } else {
+                self.size()
+            };
             &mut self.buf[self.write_pos..end]
         } else {
             &mut self.buf[self.write_pos..self.read_pos - 1]
@@ -130,8 +136,7 @@ impl RingBuf {
     }
 
     pub fn advance_write(&mut self, n: usize) {
-        let size = self.buf.len();
-        self.write_pos = (self.write_pos + n) % size;
+        self.write_pos = (self.write_pos + n) % self.size();
     }
 
     pub fn readable_slice(&self) -> &[u8] {
@@ -143,7 +148,6 @@ impl RingBuf {
     }
 
     pub fn advance_read(&mut self, n: usize) {
-        let size = self.buf.len();
-        self.read_pos = (self.read_pos + n) % size;
+        self.read_pos = (self.read_pos + n) % self.size();
     }
 }

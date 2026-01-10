@@ -14,12 +14,13 @@ pub struct User {
     pub password_hash: String,
 }
 
-pub async fn create(db: &PgPool, username: &str, password: &str) -> Result<()> {
+pub async fn create(db: &PgPool, username: &str, email: &str, password: &str) -> Result<()> {
     let password_hash = hash_password(password);
 
     sqlx::query!(
-        "INSERT INTO users (username, password_hash) VALUES ($1, $2)",
+        "INSERT INTO users (username, email, password_hash, created_at) VALUES ($1, $2, $3, now())",
         username,
+        email,
         password_hash,
     )
     .execute(db)

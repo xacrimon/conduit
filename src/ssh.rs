@@ -7,7 +7,6 @@ use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
 use tokio::{select, time};
-use tokio_util::sync::CancellationToken;
 use tracing::debug;
 
 use crate::config::Config;
@@ -16,18 +15,14 @@ use crate::model;
 use crate::state::AppState;
 use crate::utils::{RingBuf, re};
 
-pub async fn handle_session(
-    state: &AppState,
-    mut session: Session,
-    ct: CancellationToken,
-) -> anyhow::Result<()> {
+pub async fn handle_session(state: &AppState, mut session: Session) -> anyhow::Result<()> {
     session.configure();
     let keys = model::user::get_all_ssh_keys(&state.db).await?;
     session.allowed_keys(keys);
     session.handle_key_exchange().await.unwrap();
 
     let mut cancel = pin!(async {
-        ct.cancelled().await;
+        state.cancel_token.cancelled().await;
         time::sleep(Duration::from_secs(10)).await;
     });
 

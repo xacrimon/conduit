@@ -107,7 +107,7 @@ async fn run() -> Result<()> {
                         state2.task_tracker.spawn(async move {
                             debug!("accepted ssh connection");
 
-                            if let Err(err) = ssh::handle_session(&state3, session, state3.cancel_token.clone()).await {
+                            if let Err(err) = ssh::handle_session(&state3, session).await {
                                 error!("ssh session error: {}", err);
                             }
                         });

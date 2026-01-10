@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use base64::Engine;
+use sha2::{Digest, Sha256};
 
 fn main() {
     generate_css();
@@ -60,8 +61,6 @@ fn generate_css() {
 }
 
 fn compute_asset_name(name: &str, extension: &str, data: &[u8]) -> String {
-    use sha2::{Digest, Sha256};
-
     let mut hasher = Sha256::new();
     hasher.update(data);
     let hash = hasher.finalize();
