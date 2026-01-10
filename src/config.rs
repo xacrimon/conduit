@@ -59,6 +59,7 @@ pub struct Database {
 
 #[derive(Deserialize)]
 pub struct Http {
+    pub public_url: String,
     pub host: String,
     pub port: u16,
 }
@@ -73,4 +74,5 @@ pub struct Ssh {
 #[derive(Deserialize)]
 pub struct Git {
     pub repository_path: PathBuf,
+    pub lfs_path: PathBuf,
 }

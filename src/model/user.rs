@@ -64,6 +64,14 @@ pub async fn get_by_id(db: &PgPool, user_id: UserId) -> Result<Option<User>> {
     }
 }
 
+pub async fn get_id_by_username(db: &PgPool, username: &str) -> Result<Option<UserId>> {
+    let record = sqlx::query_scalar!("SELECT id FROM users WHERE username = $1", username)
+        .fetch_optional(db)
+        .await?;
+
+    Ok(record.map(UserId))
+}
+
 fn hash_password(password: &str) -> String {
     let password_hash_bytes = Sha256::digest(password.as_bytes());
     let password_hash = BASE64_STANDARD.encode(password_hash_bytes);

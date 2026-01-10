@@ -36,3 +36,9 @@ CREATE TABLE paste_files (
     content text not null,
     primary key (paste_id, filename)
 );
+
+CREATE TABLE lfs_tokens (
+    token text primary key,
+    user_id integer not null references users(id),
+    expires timestamptz not null
+);
