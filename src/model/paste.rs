@@ -30,6 +30,7 @@ pub struct PasteInfo {
 
 pub struct PasteWithFile {
     pub id: String,
+    pub user_id: UserId,
     pub visibility: String,
     pub filename: String,
     pub content: String,
@@ -52,9 +53,8 @@ pub async fn get_user_pastes(db: &PgPool, user_id: UserId) -> Result<Vec<PasteIn
 }
 
 pub async fn get_paste(db: &PgPool, paste_id: &str) -> Result<Option<PasteWithFile>> {
-    let paste = sqlx::query_as!(
-        PasteWithFile,
-        "SELECT p.id, p.visibility, pf.filename, pf.content
+    let record = sqlx::query!(
+        "SELECT p.id, p.user_id, p.visibility, pf.filename, pf.content
          FROM pastes p
          JOIN paste_files pf ON p.id = pf.paste_id
          WHERE p.id = $1",
@@ -63,7 +63,13 @@ pub async fn get_paste(db: &PgPool, paste_id: &str) -> Result<Option<PasteWithFi
     .fetch_optional(db)
     .await?;
 
-    Ok(paste)
+    Ok(record.map(|r| PasteWithFile {
+        id: r.id,
+        user_id: UserId(r.user_id),
+        visibility: r.visibility,
+        filename: r.filename,
+        content: r.content,
+    }))
 }
 
 pub async fn delete_paste(db: &PgPool, user_id: UserId, paste_id: &str) -> Result<()> {

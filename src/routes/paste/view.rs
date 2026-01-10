@@ -21,6 +21,13 @@ async fn page_view_paste(
         .await?
         .ok_or_else(|| anyhow::anyhow!("Paste not found"))?;
 
+    if paste.visibility == "private" {
+        let is_owner = session.as_ref().is_some_and(|s| s.id == paste.user_id);
+        if !is_owner {
+            return Err(anyhow::anyhow!("Paste not found").into());
+        }
+    }
+
     // Infer language mode from filename extension
     let mode = infer_ace_mode(&paste.filename);
 
