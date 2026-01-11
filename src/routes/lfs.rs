@@ -424,6 +424,10 @@ async fn authorize(state: &AppState, headers: &HeaderMap, user: &str) -> Result<
         return Ok(false);
     };
 
+    if record.expires <= OffsetDateTime::now_utc() {
+        return Ok(false);
+    }
+
     if record.username != user {
         return Ok(false);
     }
