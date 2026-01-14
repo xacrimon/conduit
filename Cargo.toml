@@ -5,8 +5,8 @@ edition = "2024"
 rust-version = "1.90"
 
 [dependencies]
-tokio = { version = "=1.48.0", features = ["rt", "io-util", "net", "fs", "time", "sync", "signal", "process"] }
-tokio-util = { version = "0.7.17", features = ["io", "rt"] }
+tokio = { version = "=1.49.0", features = ["rt", "io-util", "net", "fs", "time", "sync", "signal", "process"] }
+tokio-util = { version = "0.7.18", features = ["io", "rt"] }
 axum = { version = "0.8.8", default-features = false, features = ["http1", "tokio", "form", "query", "json"] }
 axum-extra = { version = "0.12.5", features = ["cookie"] }
 tower = "0.5.2"
