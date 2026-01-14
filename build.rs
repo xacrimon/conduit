@@ -4,6 +4,7 @@ use std::process::Command;
 
 use base64::Engine;
 use sha2::{Digest, Sha256};
+use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64_URL_SAFE_NO_PAD;
 
 fn main() {
     generate_css();
@@ -64,7 +65,7 @@ fn compute_asset_name(name: &str, extension: &str, data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
     let hash = hasher.finalize();
-    let hash_b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(hash);
+    let hash_b64 = BASE64_URL_SAFE_NO_PAD.encode(hash);
 
     format!("{}-{}.{}", name, hash_b64, extension)
 }
