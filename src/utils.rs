@@ -2,7 +2,7 @@ use std::mem;
 use std::task::Waker;
 
 use base64::Engine as _;
-use base64::engine::general_purpose;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64_URL_SAFE_NO_PAD;
 use rand::RngCore;
 use sqlx::PgTransaction;
 
@@ -33,7 +33,7 @@ pub async fn unique_string(
 
     loop {
         rand::thread_rng().fill_bytes(&mut buffer);
-        let candidate = general_purpose::URL_SAFE_NO_PAD.encode(&buffer);
+        let candidate = BASE64_URL_SAFE_NO_PAD.encode(&buffer);
 
         let exists = sqlx::query_scalar::<_, bool>(&sql)
             .bind(&candidate)
