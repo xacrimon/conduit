@@ -69,10 +69,9 @@ async fn run_job(job: &Job, state: AppState) {
     }
 
     let res = sqlx::query!(
-        "INSERT INTO jobs_last_run (name, last_run) VALUES ($1, $2)
+        "INSERT INTO jobs_last_run (name, last_run) VALUES ($1, now())
          ON CONFLICT (name) DO UPDATE SET last_run = EXCLUDED.last_run",
         job.name,
-        OffsetDateTime::now_utc()
     )
     .execute(&state.db)
     .await;
