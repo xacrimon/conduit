@@ -1,50 +1,33 @@
-var autoreload_key = null;
-
-async function autoreload_get_key() {
-    const url = "/autoreload";
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            return null;
-        }
-
-        return await response.text();
-    } catch (error) {
-        console.error(error.message);
-    }
-}
+var autoreload_es = null;
+var triggered_reload = false;
 
 async function autoreload_check() {
-    const new_key = await autoreload_get_key();
-    if (new_key === null) {
-        return;
-    }
-
-    if (autoreload_key === null) {
-        autoreload_key = new_key;
-        return;
-    }
-
-    if (new_key !== autoreload_key) {
-        autoreload_perform_reload();
+    if (autoreload_es == null) {
+        autoreload_es = new EventSource("/autoreload");
+        autoreload_es.onerror = function(_event) {
+            if (!triggered_reload) {
+                triggered_reload = true;
+                autoreload_perform_reload();
+            }
+        };
     }
 }
 
 async function autoreload_perform_reload() {
-    try {
-        while (true) {
+    while (true) {
+        await autoreload_wait(100);
+
+        try {
             const response = await fetch(window.location.href);
             if (!response.ok) {
-
+                console.error("response not ok")
+                continue;
             }
 
-            autoreload_wait(100);
-            break;
+            location.reload();
+        } catch (error) {
+            console.error(error.message);
         }
-
-        location.reload();
-    } catch (error) {
-        console.error(error.message);
     }
 }
 

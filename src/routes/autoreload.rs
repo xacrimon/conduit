@@ -1,17 +1,20 @@
-use std::sync::LazyLock;
+use std::convert::Infallible;
+use std::time::Duration;
 
 use axum::Router;
-use axum::response::IntoResponse;
+use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::routing::get;
+use futures_util::stream::{self, Stream};
 
 use crate::state::AppState;
 
-static AUTORELOAD_KEY: LazyLock<u64> = LazyLock::new(rand::random);
+const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(15);
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/autoreload", get(autoreload))
 }
 
-async fn autoreload() -> impl IntoResponse {
-    AUTORELOAD_KEY.to_string()
+async fn autoreload() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let stream = stream::pending();
+    Sse::new(stream).keep_alive(KeepAlive::new().interval(KEEPALIVE_INTERVAL))
 }
