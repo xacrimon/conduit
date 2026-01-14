@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO jobs_last_run (name, last_run) VALUES ($1, $2)\n         ON CONFLICT (name) DO UPDATE SET last_run = EXCLUDED.last_run",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "04d7b49668ad33e77cfb1e2720a19df192fd8404d2f023aece4d4310ea89a339"
+}

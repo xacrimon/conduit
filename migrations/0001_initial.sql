@@ -42,3 +42,8 @@ CREATE TABLE lfs_tokens (
     user_id integer not null references users(id),
     expires timestamptz not null
 );
+
+CREATE TABLE jobs_last_run (
+    name text primary key,
+    last_run timestamptz not null
+);

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM lfs_tokens WHERE expires < now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "ceff91891402cb2371ae5dbb768a3585f1c733c787234047b769c281c40d0c48"
+}

@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use base64::Engine;
-use sha2::{Digest, Sha256};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64_URL_SAFE_NO_PAD;
+use sha2::{Digest, Sha256};
 
 fn main() {
     generate_css();
