@@ -104,6 +104,7 @@ async fn do_login(
 
     let cookie = Cookie::build((auth::COOKIE_NAME, session.token))
         .http_only(true)
+        .secure(cfg!(not(debug_assertions)))
         .same_site(SameSite::Lax)
         .expires(session.expires);
 
