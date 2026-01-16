@@ -25,8 +25,7 @@ pub struct LfsTokenWithUser {
 }
 
 pub async fn create(db: &PgPool, user_id: UserId, ttl: Duration) -> Result<LfsToken> {
-    let mut buf = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut buf);
+    let buf: [u8; 16] = rand::random();
     let token = BASE64_URL_SAFE_NO_PAD.encode(buf);
     let expires = OffsetDateTime::now_utc() + ttl;
 

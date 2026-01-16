@@ -27,13 +27,17 @@ pub struct Scheduler {
 impl Scheduler {
     pub fn new() -> Self {
         let mut interval = time::interval(CHECK_INTERVAL);
+        interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
         interval.reset();
 
         Self { interval }
     }
 
-    pub async fn run(&mut self, state: &AppState) -> Result<()> {
+    pub async fn wait(&mut self) {
         self.interval.tick().await;
+    }
+
+    pub async fn run(&mut self, state: &AppState) -> Result<()> {
         let now = OffsetDateTime::now_utc();
 
         for job in JOBS {
@@ -54,7 +58,7 @@ impl Scheduler {
             };
 
             if should_run {
-                tokio::spawn(run_job(job, state.clone()));
+                state.task_tracker.spawn(run_job(job, state.clone()));
             }
         }
 

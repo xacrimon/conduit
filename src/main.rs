@@ -54,6 +54,24 @@ async fn run() -> Result<()> {
 
     metrics::get();
 
+    {
+        let state2 = state.clone();
+        let mut scheduler = jobs::Scheduler::new();
+
+        state.task_tracker.spawn(async move {
+            loop {
+                tokio::select! {
+                    _ = state2.cancel_token.cancelled() => break,
+                    _ = scheduler.wait() => (),
+                }
+
+                if let Err(err) = scheduler.run(&state2).await {
+                    error!("job scheduler error: {}", err);
+                }
+            }
+        });
+    }
+
     let middleware = ServiceBuilder::new()
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
