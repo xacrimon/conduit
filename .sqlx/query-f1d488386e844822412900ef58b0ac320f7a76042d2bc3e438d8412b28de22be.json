@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT lt.user_id, lt.expires, u.username\n        FROM lfs_tokens lt\n        JOIN users u ON lt.user_id = u.id\n        WHERE lt.token = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "expires",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "username",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f1d488386e844822412900ef58b0ac320f7a76042d2bc3e438d8412b28de22be"
+}

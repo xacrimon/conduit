@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT s.user_id, s.expires, u.username\n        FROM sessions s\n        JOIN users u ON s.user_id = u.id\n        WHERE s.token = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "expires",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "username",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "432199a7e3f70dc040f4728aaadab60c079e8c970dd2b452260bb37ef1c0c9af"
+}

@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64_URL_SAFE_NO_PAD;
+use sha2::{Digest, Sha256};
 
 fn main() {
     generate_css();
@@ -53,15 +55,17 @@ fn generate_css() {
     }
 
     Command::new("tailwindcss").args(&args).status().unwrap();
+
+    let css_data = std::fs::read(&css_path).unwrap();
+    let css_asset_name = compute_asset_name("index", "css", &css_data);
+    println!("cargo:rustc-env=CONDUIT_CSS_ASSET_NAME={}", css_asset_name);
 }
 
 fn compute_asset_name(name: &str, extension: &str, data: &[u8]) -> String {
-    use sha2::{Digest, Sha256};
-
     let mut hasher = Sha256::new();
     hasher.update(data);
     let hash = hasher.finalize();
-    let hash_b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(hash);
+    let hash_b64 = BASE64_URL_SAFE_NO_PAD.encode(hash);
 
     format!("{}-{}.{}", name, hash_b64, extension)
 }

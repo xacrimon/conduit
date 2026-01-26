@@ -1,8 +1,7 @@
+mod account;
 mod keys;
-mod login;
-mod logout;
 mod profile;
-mod register;
+mod security;
 
 use axum::Router;
 use axum::response::Redirect;
@@ -12,20 +11,58 @@ use crate::state::AppState;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .merge(login::routes())
-        .merge(logout::routes())
-        .merge(register::routes())
         .merge(profile::routes())
         .merge(keys::routes())
+        .merge(account::routes())
+        .merge(security::routes())
         .route("/meta", get(meta_redirect))
 }
 
-fn meta_nav() -> maud::Markup {
+fn meta_nav(current: &str) -> maud::Markup {
+    let items = [
+        ("profile", "/meta/profile"),
+        ("account", "/meta/account"),
+        ("keys", "/meta/keys"),
+        ("security", "/meta/security"),
+    ];
+
     maud::html! {
-        div {
-            ul .flex .gap-4 {
-                li { a .hover:underline href="/meta/profile" { "profile" } }
-                li { a .hover:underline href="/meta/keys" { "keys" } }
+        div .border-b .border-gray-300 .mb-3 {
+            ul .flex .gap-1 .text-sm {
+                @for (name, href) in items {
+                    @if name == current {
+                        li {
+                            a
+                                .block
+                                .px-2
+                                .py-1
+                                .bg-gray-200
+                                .text-black
+                                .border
+                                .border-gray-300
+                                href=(href)
+                            {
+                                (name)
+                            }
+                        }
+                    } @else {
+                        li {
+                            a
+                                .block
+                                .px-2
+                                .py-1
+                                .text-gray-600
+                                .hover:text-black
+                                .hover:bg-gray-100
+                                .border
+                                .border-transparent
+                                href=(href)
+                            {
+                                (name)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

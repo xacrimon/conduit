@@ -1,7 +1,11 @@
 CREATE TABLE users (
     id integer primary key generated always as identity,
     username text not null unique,
-    password_hash text not null
+    email text not null unique,
+    password_hash text not null,
+    created_at timestamptz not null,
+    display_name text not null,
+    biography text not null
 );
 
 CREATE TABLE user_keys (
@@ -10,6 +14,7 @@ CREATE TABLE user_keys (
     username text not null,
     hostname text not null,
     user_id integer not null references users(id),
+    name text not null,
     primary key (type, encoded)
 );
 
@@ -30,4 +35,15 @@ CREATE TABLE paste_files (
     filename text not null,
     content text not null,
     primary key (paste_id, filename)
+);
+
+CREATE TABLE lfs_tokens (
+    token text primary key,
+    user_id integer not null references users(id),
+    expires timestamptz not null
+);
+
+CREATE TABLE jobs_last_run (
+    name text primary key,
+    last_run timestamptz not null
 );

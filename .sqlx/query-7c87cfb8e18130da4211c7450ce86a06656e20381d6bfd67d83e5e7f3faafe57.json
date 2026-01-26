@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id, p.visibility, pf.filename\n         FROM pastes p\n         JOIN paste_files pf ON p.id = pf.paste_id\n         WHERE p.user_id = $1\n         ORDER BY p.id DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "visibility",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "filename",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7c87cfb8e18130da4211c7450ce86a06656e20381d6bfd67d83e5e7f3faafe57"
+}

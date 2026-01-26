@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::ffi::{CStr, c_char, c_int, c_void};
-use std::pin::Pin;
+use std::pin::{Pin, UnsafePinned};
 use std::{cmp, marker, mem, ptr, slice};
 
 use libssh_rs_sys as libssh;
@@ -9,7 +9,6 @@ use tracing::debug;
 
 use crate::libssh::error;
 
-// TODO: needs https://doc.rust-lang.org/std/pin/struct.UnsafePinned.html
 pub struct ChannelState {
     channel: libssh::ssh_channel,
     callbacks: libssh::ssh_channel_callbacks_struct,
@@ -19,7 +18,7 @@ pub struct ChannelState {
 }
 
 impl ChannelState {
-    pub(crate) fn new(channel: libssh::ssh_channel) -> Pin<Box<Self>> {
+    pub(crate) fn new(channel: libssh::ssh_channel) -> Pin<Box<UnsafePinned<Self>>> {
         let callbacks = libssh::ssh_channel_callbacks_struct {
             size: mem::size_of::<libssh::ssh_channel_callbacks_struct>(),
             userdata: ptr::null_mut(),
@@ -42,85 +41,25 @@ impl ChannelState {
             channel_request_response_function: None,
         };
 
-        let mut state = Box::pin(Self {
+        let mut state = Box::pin(UnsafePinned::new(Self {
             channel,
             callbacks,
             events: VecDeque::new(),
             write_window: 0,
             _pinned: marker::PhantomPinned,
-        });
+        }));
 
         unsafe {
-            state.as_mut().get_unchecked_mut().callbacks.userdata = &*state as *const _ as _;
+            let state_ref = &mut *state.as_mut().get_unchecked_mut().get_mut_unchecked();
+            state_ref.callbacks.userdata = state_ref as *mut _ as *mut c_void;
         }
 
         unsafe {
-            libssh::ssh_set_channel_callbacks(channel, &state.callbacks as *const _ as _);
+            let state_ref = &*state.as_ref().get_ref().get();
+            libssh::ssh_set_channel_callbacks(channel, &state_ref.callbacks as *const _ as _);
         }
 
         state
-    }
-
-    pub fn write(mut self: Pin<&mut Self>, data: &[u8], stderr: bool) -> io::Result<usize> {
-        let write_fn = if !stderr {
-            libssh::ssh_channel_write
-        } else {
-            libssh::ssh_channel_write_stderr
-        };
-
-        let window = *self.as_mut().write_window();
-        let do_write = cmp::min(data.len(), window);
-        if window == 0 {
-            return Err(io::ErrorKind::WouldBlock.into());
-        }
-
-        let rc = unsafe {
-            write_fn(
-                self.channel,
-                data.as_ptr() as *const c_void,
-                do_write as u32,
-            )
-        };
-
-        if rc == libssh::SSH_ERROR {
-            return Err(error::libssh(self.channel as _));
-        }
-
-        assert_eq!(rc as usize, do_write);
-        *self.as_mut().write_window() -= do_write;
-        Ok(do_write)
-    }
-
-    pub fn writable(mut self: Pin<&mut Self>) -> bool {
-        *self.as_mut().write_window() > 0
-    }
-
-    pub fn send_eof(self: Pin<&mut Self>) -> io::Result<()> {
-        let rc = unsafe { libssh::ssh_channel_send_eof(self.channel) };
-
-        if rc != 0 {
-            return Err(error::libssh(self.channel as _));
-        }
-
-        Ok(())
-    }
-
-    pub fn send_exit_status(self: Pin<&mut Self>, status: i32) -> io::Result<()> {
-        let rc = unsafe { libssh::ssh_channel_request_send_exit_status(self.channel, status) };
-
-        if rc != 0 {
-            return Err(error::libssh(self.channel as _));
-        }
-
-        Ok(())
-    }
-
-    pub fn events(self: Pin<&mut Self>) -> &mut VecDeque<ChannelEvent> {
-        unsafe { &mut self.get_unchecked_mut().events }
-    }
-
-    fn write_window(self: Pin<&mut Self>) -> &mut usize {
-        unsafe { &mut self.get_unchecked_mut().write_window }
     }
 
     unsafe extern "C" fn callback_data(
@@ -131,17 +70,18 @@ impl ChannelState {
         is_stderr: c_int,
         userdata: *mut c_void,
     ) -> c_int {
-        let state_ptr = userdata as *mut ChannelState;
-        let state = unsafe { Pin::new_unchecked(&mut *state_ptr) };
+        unsafe {
+            let state = &mut *(userdata as *mut ChannelState);
 
-        let data = unsafe { slice::from_raw_parts(data as *const u8, len as usize) };
-        let is_stderr = is_stderr != 0;
-        state.events().push_back(ChannelEvent::Data {
-            data: data.to_vec(),
-            is_stderr,
-        });
+            let data = slice::from_raw_parts(data as *const u8, len as usize);
+            let is_stderr = is_stderr != 0;
+            state.events.push_back(ChannelEvent::Data {
+                data: data.to_vec(),
+                is_stderr,
+            });
 
-        data.len() as c_int
+            data.len() as c_int
+        }
     }
 
     unsafe extern "C" fn callback_eof(
@@ -149,10 +89,10 @@ impl ChannelState {
         _ssh_channel: libssh::ssh_channel,
         userdata: *mut c_void,
     ) {
-        let state_ptr = userdata as *mut ChannelState;
-        let state = unsafe { Pin::new_unchecked(&mut *state_ptr) };
-
-        state.events().push_back(ChannelEvent::Eof);
+        unsafe {
+            let state = &mut *(userdata as *mut ChannelState);
+            state.events.push_back(ChannelEvent::Eof);
+        }
     }
 
     unsafe extern "C" fn callback_close(
@@ -160,10 +100,10 @@ impl ChannelState {
         _ssh_channel: libssh::ssh_channel,
         userdata: *mut c_void,
     ) {
-        let state_ptr = userdata as *mut ChannelState;
-        let state = unsafe { Pin::new_unchecked(&mut *state_ptr) };
-
-        state.events().push_back(ChannelEvent::Close);
+        unsafe {
+            let state = &mut *(userdata as *mut ChannelState);
+            state.events.push_back(ChannelEvent::Close);
+        }
     }
 
     unsafe extern "C" fn callback_exec_request(
@@ -172,20 +112,19 @@ impl ChannelState {
         command: *const c_char,
         userdata: *mut c_void,
     ) -> c_int {
-        let state_ptr = userdata as *mut ChannelState;
-        let state = unsafe { Pin::new_unchecked(&mut *state_ptr) };
+        unsafe {
+            let state = &mut *(userdata as *mut ChannelState);
 
-        let command = unsafe { CStr::from_ptr(command) }
-            .to_string_lossy()
-            .into_owned();
+            let command = CStr::from_ptr(command).to_string_lossy().into_owned();
 
-        debug!("exec request: {}", command);
+            debug!("exec request: {}", command);
 
-        state
-            .events()
-            .push_back(ChannelEvent::ExeqRequest { command });
+            state
+                .events
+                .push_back(ChannelEvent::ExeqRequest { command });
 
-        0
+            0
+        }
     }
 
     unsafe extern "C" fn callback_write_wontblock(
@@ -194,11 +133,11 @@ impl ChannelState {
         bytes: u32,
         userdata: *mut c_void,
     ) -> c_int {
-        let state_ptr = userdata as *mut ChannelState;
-        let mut state = unsafe { Pin::new_unchecked(&mut *state_ptr) };
-
-        *state.as_mut().write_window() = bytes as usize;
-        0
+        unsafe {
+            let state = &mut *(userdata as *mut ChannelState);
+            state.write_window = bytes as usize;
+            0
+        }
     }
 }
 
@@ -213,6 +152,90 @@ impl Drop for ChannelState {
 
 unsafe impl Send for ChannelState {}
 unsafe impl Sync for ChannelState {}
+
+pub trait ChannelStateExt {
+    fn write(&mut self, data: &[u8], stderr: bool) -> io::Result<usize>;
+    fn writable(&mut self) -> bool;
+    fn send_eof(&mut self) -> io::Result<()>;
+    fn send_exit_status(&mut self, status: i32) -> io::Result<()>;
+    fn send_close(&mut self) -> io::Result<()>;
+    fn events(&mut self) -> &mut VecDeque<ChannelEvent>;
+}
+
+impl ChannelStateExt for Pin<&mut UnsafePinned<ChannelState>> {
+    fn write(&mut self, data: &[u8], stderr: bool) -> io::Result<usize> {
+        let this = unsafe { &mut *self.as_mut().get_unchecked_mut().get_mut_unchecked() };
+        let write_fn = if !stderr {
+            libssh::ssh_channel_write
+        } else {
+            libssh::ssh_channel_write_stderr
+        };
+
+        let do_write = cmp::min(data.len(), this.write_window);
+        if this.write_window == 0 {
+            return Err(io::ErrorKind::WouldBlock.into());
+        }
+
+        let rc = unsafe {
+            write_fn(
+                this.channel,
+                data.as_ptr() as *const c_void,
+                do_write as u32,
+            )
+        };
+
+        if rc == libssh::SSH_ERROR {
+            return Err(error::libssh(this.channel as _));
+        }
+
+        assert_eq!(rc as usize, do_write);
+        this.write_window -= do_write;
+        Ok(do_write)
+    }
+
+    fn writable(&mut self) -> bool {
+        let this = unsafe { &*self.as_mut().get_unchecked_mut().get_mut_unchecked() };
+        this.write_window > 0
+    }
+
+    fn send_eof(&mut self) -> io::Result<()> {
+        let this = unsafe { &*self.as_mut().get_unchecked_mut().get_mut_unchecked() };
+        let rc = unsafe { libssh::ssh_channel_send_eof(this.channel) };
+
+        if rc != 0 {
+            return Err(error::libssh(this.channel as _));
+        }
+
+        Ok(())
+    }
+
+    fn send_exit_status(&mut self, status: i32) -> io::Result<()> {
+        let this = unsafe { &*self.as_mut().get_unchecked_mut().get_mut_unchecked() };
+        let rc = unsafe { libssh::ssh_channel_request_send_exit_status(this.channel, status) };
+
+        if rc != 0 {
+            return Err(error::libssh(this.channel as _));
+        }
+
+        Ok(())
+    }
+
+    fn send_close(&mut self) -> io::Result<()> {
+        let this = unsafe { &*self.as_mut().get_unchecked_mut().get_mut_unchecked() };
+        let rc = unsafe { libssh::ssh_channel_close(this.channel) };
+
+        if rc != 0 {
+            return Err(error::libssh(this.channel as _));
+        }
+
+        Ok(())
+    }
+
+    fn events(&mut self) -> &mut VecDeque<ChannelEvent> {
+        let this = unsafe { &mut *self.as_mut().get_unchecked_mut().get_mut_unchecked() };
+        &mut this.events
+    }
+}
 
 #[derive(Debug)]
 pub enum ChannelEvent {
