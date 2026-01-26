@@ -1,3 +1,7 @@
+[workspace]
+resolver = "3"
+members = [".", "derive"]
+
 [package]
 name = "conduit"
 version = "0.1.0"
@@ -31,6 +35,7 @@ time = { version = "0.3.44", features = ["formatting"] }
 thiserror = "2.0.17"
 anyhow = "1.0.100"
 regex-lite = "0.1.8"
+conduit-derive = { path = "derive" }
 
 [build-dependencies]
 sha2 = "0.10.9"

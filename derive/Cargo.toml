@@ -1,0 +1,13 @@
+[package]
+name = "conduit-derive"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "2.0.114"
+quote = "1.0.44"
+proc-macro2 = "1.0.106"
