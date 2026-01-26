@@ -3,7 +3,6 @@ use std::time::Duration;
 use anyhow::Result;
 use base64::engine::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64_URL_SAFE_NO_PAD;
-use rand::RngCore;
 use sqlx::PgPool;
 use time::OffsetDateTime;
 
