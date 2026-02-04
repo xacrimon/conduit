@@ -1,5 +1,5 @@
 [build]
-rustflags = ["--cfg", "tokio_unstable"]
+rustflags = ["--cfg", "tokio_unstable", "-Z", "debuginfo-compression=zlib"]
 
 [profile.dev]
 debug = "line-tables-only"
