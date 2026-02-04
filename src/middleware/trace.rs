@@ -3,7 +3,8 @@ use std::convert::Infallible;
 use axum::extract::Request;
 use axum::middleware::Next;
 use axum::response::Response;
-use tracing::Instrument;
+use tokio::time::Instant;
+use tracing::{Instrument, info_span, debug, info};
 
 fn request_id() -> u64 {
     cfg_select! {
@@ -22,12 +23,14 @@ pub async fn middleware(
     next: Next,
 ) -> Result<Response, Infallible> {
     let request_id = request_id();
-    let span = tracing::info_span!("web request", web_request_id = request_id);
+    let start = Instant::now();
+    let span = info_span!("web request", web_request_id = request_id);
     
     let method = request.method();
     let uri = request.uri();
-    tracing::info!(parent: &span, "received request: {} {}", method, uri);
+    info!(parent: &span, "received request: {} {}", method, uri);
 
-    let response = next.run(request).instrument(span).await;
+    let response = next.run(request).instrument(span.clone()).await;
+    debug!(parent: &span, "completed request in {}", humantime::format_duration(start.elapsed()));
     Ok(response)
 }

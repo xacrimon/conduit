@@ -36,6 +36,7 @@ thiserror = "2.0.17"
 anyhow = "1.0.100"
 regex-lite = "0.1.8"
 conduit-derive = { path = "derive" }
+humantime = "2.3.0"
 
 [build-dependencies]
 sha2 = "0.10.9"
