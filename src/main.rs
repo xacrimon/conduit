@@ -74,10 +74,7 @@ async fn run() -> Result<()> {
     }
 
     let middleware = ServiceBuilder::new()
-        .layer(
-            axum::middleware::from_fn(
-            middleware::trace::middleware,
-        ))
+        .layer(axum::middleware::from_fn(middleware::trace::middleware))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             middleware::auth::middleware,
