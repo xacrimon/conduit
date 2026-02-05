@@ -9,8 +9,8 @@ inherits = "dev"
 incremental = false
 
 [profile.release]
-opt-level = "s"
-lto = "thin"
+opt-level = "z"
+lto = "fat"
 codegen-units = 1
 
 [target.x86_64-unknown-linux-gnu]
