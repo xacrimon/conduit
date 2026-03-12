@@ -226,7 +226,9 @@ macro_rules! impl_validate_range {
     };
 }
 
-impl_validate_range!(i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32, f64);
+impl_validate_range!(
+    i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32, f64
+);
 
 impl<T: ValidateRange> ValidateRange for Option<T> {
     fn validate_range(
@@ -537,8 +539,9 @@ pub fn validate_must_match<T: PartialEq>(a: &T, b: &T) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use conduit_derive::Validate;
+
+    use super::*;
 
     #[derive(Validate)]
     struct TestForm {

@@ -1,12 +1,10 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, quote_spanned};
+use syn::parse::Parse;
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{
-    parse::Parse,
-    parse_macro_input, Data, DeriveInput, Expr, Fields, Lit, MetaNameValue, Token,
-    punctuated::Punctuated,
-};
+use syn::{Data, DeriveInput, Expr, Fields, Lit, MetaNameValue, Token, parse_macro_input};
 
 #[proc_macro_derive(Validate, attributes(validate))]
 pub fn derive_validation(input: TokenStream) -> TokenStream {
@@ -76,11 +74,21 @@ fn impl_validate(input: &DeriveInput) -> syn::Result<TokenStream2> {
 
 #[derive(Debug)]
 enum Validator {
-    Email { message: Option<String> },
-    Url { message: Option<String> },
-    Ip { message: Option<String> },
-    NonControlCharacter { message: Option<String> },
-    Required { message: Option<String> },
+    Email {
+        message: Option<String>,
+    },
+    Url {
+        message: Option<String>,
+    },
+    Ip {
+        message: Option<String>,
+    },
+    NonControlCharacter {
+        message: Option<String>,
+    },
+    Required {
+        message: Option<String>,
+    },
     Length {
         min: Option<Expr>,
         max: Option<Expr>,
@@ -121,9 +129,10 @@ fn parse_validate_attr(attr: &syn::Attribute) -> syn::Result<Vec<Validator>> {
     let mut validators = Vec::new();
 
     attr.parse_nested_meta(|meta| {
-        let ident = meta.path.get_ident().ok_or_else(|| {
-            syn::Error::new_spanned(&meta.path, "expected validator name")
-        })?;
+        let ident = meta
+            .path
+            .get_ident()
+            .ok_or_else(|| syn::Error::new_spanned(&meta.path, "expected validator name"))?;
         let name = ident.to_string();
 
         match name.as_str() {
@@ -174,7 +183,12 @@ fn parse_validate_attr(attr: &syn::Attribute) -> syn::Result<Vec<Validator>> {
                     Ok(())
                 })?;
 
-                validators.push(Validator::Length { min, max, equal, message });
+                validators.push(Validator::Length {
+                    min,
+                    max,
+                    equal,
+                    message,
+                });
             }
             "range" => {
                 let mut min = None;
@@ -212,8 +226,7 @@ fn parse_validate_attr(attr: &syn::Attribute) -> syn::Result<Vec<Validator>> {
             }
             "contains" => {
                 if meta.input.peek(Token![=]) {
-                    let value: MetaNameValue =
-                        syn::parse2(quote! { #ident = }.into()).unwrap();
+                    let value: MetaNameValue = syn::parse2(quote! { #ident = }.into()).unwrap();
                     // parse `= "..."`
                     meta.input.parse::<Token![=]>()?;
                     let lit: Lit = meta.input.parse()?;
@@ -264,10 +277,7 @@ fn parse_validate_attr(attr: &syn::Attribute) -> syn::Result<Vec<Validator>> {
                             _ => {
                                 return Err(syn::Error::new_spanned(
                                     &value,
-                                    format!(
-                                        "unknown does_not_contain parameter: {}",
-                                        key
-                                    ),
+                                    format!("unknown does_not_contain parameter: {}", key),
                                 ));
                             }
                         }
@@ -475,7 +485,11 @@ fn generate_validation(
             })
         }
         Validator::NonControlCharacter { message } => {
-            let msg = error_message(message, "non_control_character", "contains control characters");
+            let msg = error_message(
+                message,
+                "non_control_character",
+                "contains control characters",
+            );
             Ok(quote_spanned! { span =>
                 if !crate::validate::ValidateNonControlCharacter::validate_non_control_character(&self.#field_ident) {
                     errors.add(
@@ -498,7 +512,12 @@ fn generate_validation(
                 }
             })
         }
-        Validator::Length { min, max, equal, message } => {
+        Validator::Length {
+            min,
+            max,
+            equal,
+            message,
+        } => {
             let msg = error_message(message, "length", "invalid length");
             let min_expr = option_expr(min);
             let max_expr = option_expr(max);
@@ -518,7 +537,13 @@ fn generate_validation(
                 }
             })
         }
-        Validator::Range { min, max, exclusive_min, exclusive_max, message } => {
+        Validator::Range {
+            min,
+            max,
+            exclusive_min,
+            exclusive_max,
+            message,
+        } => {
             let msg = error_message(message, "range", "value out of range");
             let min_expr = option_f64_expr(min);
             let max_expr = option_f64_expr(max);
@@ -597,11 +622,9 @@ fn generate_validation(
                 }
             })
         }
-        Validator::Nested => {
-            Ok(quote_spanned! { span =>
-                errors.merge_self(#field_name, crate::validate::Validate::validate(&self.#field_ident));
-            })
-        }
+        Validator::Nested => Ok(quote_spanned! { span =>
+            errors.merge_self(#field_name, crate::validate::Validate::validate(&self.#field_ident));
+        }),
         Validator::Custom { function, message } => {
             let msg = error_message(message, "custom", "custom validation failed");
             Ok(quote_spanned! { span =>
