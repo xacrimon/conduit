@@ -13,7 +13,7 @@ tokio = { version = "=1.50.0", features = ["rt", "io-util", "net", "fs", "time",
 tokio-util = { version = "0.7.18", features = ["io", "rt"] }
 axum = { version = "0.8.8", default-features = false, features = ["http1", "tokio", "form", "query", "json"] }
 axum-extra = { version = "0.12.5", features = ["cookie"] }
-tower = "0.5.2"
+tower = "0.5.3"
 tower-http = { version = "0.6.8", features = ["fs", "catch-panic"] }
 maud = { version = "0.27.0", features = ["axum"] }
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "postgres", "time", "macros", "migrate"] }
@@ -22,19 +22,19 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", default-features = false, features = ["std", "fmt", "ansi"] }
 log = "0.4.29"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.148"
-toml = { version = "0.9.10", default-features = false, features = ["parse", "serde"] }
-futures-util = "0.3.31"
+serde_json = "1.0.149"
+toml = { version = "0.9.12", default-features = false, features = ["parse", "serde"] }
+futures-util = "0.3.32"
 base64 = "0.22.1"
 prometheus = { version = "0.14.0", default-features = false }
 sha2 = "0.10.9"
 dotenvy = "0.15.7"
-url = "2.5.7"
+url = "2.5.8"
 rand = "0.8.5"
-time = { version = "0.3.44", features = ["formatting"] }
-thiserror = "2.0.17"
-anyhow = "1.0.100"
-regex-lite = "0.1.8"
+time = { version = "0.3.47", features = ["formatting"] }
+thiserror = "2.0.18"
+anyhow = "1.0.102"
+regex-lite = "0.1.9"
 conduit-derive = { path = "derive" }
 humantime = "2.3.0"
 
