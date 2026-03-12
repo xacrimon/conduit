@@ -46,11 +46,13 @@ pub async fn unique_string(
     }
 }
 
+#[allow(dead_code)]
 pub struct MutWaker {
     registered: bool,
     waker: Waker,
 }
 
+#[allow(dead_code)]
 impl MutWaker {
     pub fn new() -> Self {
         Self {
