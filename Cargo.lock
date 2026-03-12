@@ -191,6 +191,7 @@ dependencies = [
  "libssh-rs-sys",
  "log",
  "maud",
+ "pin-project-lite",
  "prometheus",
  "rand",
  "regex-lite",

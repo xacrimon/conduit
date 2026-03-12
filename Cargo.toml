@@ -37,6 +37,7 @@ anyhow = "1.0.102"
 regex-lite = "0.1.9"
 conduit-derive = { path = "derive" }
 humantime = "2.3.0"
+pin-project-lite = "0.2.17"
 
 [build-dependencies]
 sha2 = "0.10.9"
