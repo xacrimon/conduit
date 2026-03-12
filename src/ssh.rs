@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::pin::pin;
@@ -441,12 +441,12 @@ async fn handle_lfs_auth(
 #[derive(Serialize)]
 struct LfsAuthResponse {
     href: String,
-    header: HashMap<String, String>,
+    header: BTreeMap<String, String>,
     expires_in: u64,
 }
 
 fn lfs_auth_response(state: &AppState, user: &str, repo: &str, token: &str) -> LfsAuthResponse {
-    let mut header = HashMap::new();
+    let mut header = BTreeMap::new();
     header.insert("Authorization".to_string(), format!("RemoteAuth {}", token));
 
     LfsAuthResponse {

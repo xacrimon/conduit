@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use axum::Router;
@@ -75,7 +75,7 @@ struct LfsActions {
 struct LfsLink {
     href: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    header: Option<HashMap<String, String>>,
+    header: Option<BTreeMap<String, String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     expires_in: Option<u64>,
 }
@@ -116,7 +116,7 @@ async fn batch(
         .get(header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
         .map(|s| {
-            let mut h = HashMap::new();
+            let mut h = BTreeMap::new();
             h.insert("Authorization".to_string(), s.to_string());
             h
         });
