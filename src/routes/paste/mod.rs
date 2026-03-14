@@ -87,7 +87,7 @@ async fn page_paste(session: Session) -> maud::Markup {
 
 fn ace_script() -> maud::Markup {
     maud::html! {
-        script defer src="/assets/ace/ace.js" {}
+        script defer src="/assets/ace-1.43.4/ace.js" {}
     }
 }
 
