@@ -92,11 +92,7 @@ fn cache_control_for(path: &str) -> Option<HeaderValue> {
 
     let directives = match asset {
         "/favicon.ico" => "public, max-age=86400",
-        CSS_ASSET_NAME => "public, max-age=2592000, immutable",
-        "autoreload.js" => "public, max-age=2592000, immutable",
-        "lib/htmx-2.0.8.js" => "public, max-age=2592000, immutable",
-        _ if asset.starts_with("lib/ace-1.43.4/") => "public, max-age=2592000, immutable",
-        _ => return None,
+        _ => "public, max-age=2592000, immutable",
     };
 
     Some(HeaderValue::from_static(directives))
