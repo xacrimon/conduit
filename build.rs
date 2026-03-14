@@ -5,9 +5,11 @@ use std::process::Command;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64_URL_SAFE_NO_PAD;
 use sha2::{Digest, Sha256};
+use walkdir::WalkDir;
 
 fn main() {
     generate_css();
+    generate_asset_map();
     println!("cargo:rustc-env=CONDUIT_VERSION={}", version());
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=.git/HEAD");
@@ -68,4 +70,43 @@ fn compute_asset_name(name: &str, extension: &str, data: &[u8]) -> String {
     let hash_b64 = BASE64_URL_SAFE_NO_PAD.encode(hash);
 
     format!("{}-{}.{}", name, hash_b64, extension)
+}
+
+fn generate_asset_map() {
+    let mut map = Vec::new();
+
+    for entry in WalkDir::new("public/assets")
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        if entry.file_type().is_file() {
+            let path = entry.path();
+
+            if path.starts_with("public/assets/lib") {
+                continue;
+            }
+
+            let data = std::fs::read(path).unwrap();
+            let name = path
+                .strip_prefix("public/assets")
+                .unwrap()
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap();
+
+            let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+            let asset_name = compute_asset_name(name, extension, &data);
+            map.push((format!("{}.{}", name, extension), asset_name));
+        }
+    }
+
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let map_path = PathBuf::from(&out_dir).join("asset_map.txt");
+    let map_data = map
+        .into_iter()
+        .map(|(name, asset_name)| format!("{}={}", name, asset_name))
+        .collect::<Vec<_>>()
+        .join("\n");
+    std::fs::write(map_path, map_data).unwrap();
 }

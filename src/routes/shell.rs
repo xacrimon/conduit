@@ -51,7 +51,7 @@ fn scripts() -> maud::Markup {
     maud::html! {
         script src="/assets/lib/htmx-2.0.8.js" {}
         @if cfg!(debug_assertions) {
-            script src="/assets/autoreload.js" {}
+            script src=(assets::path("autoreload.js")) {}
         }
     }
 }
