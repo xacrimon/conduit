@@ -88,9 +88,7 @@ async fn header_middleware(request: Request, next: Next) -> Response {
 }
 
 fn cache_control_for(path: &str) -> Option<HeaderValue> {
-    let asset = path.strip_prefix("/assets/").unwrap_or(path);
-
-    let directives = match asset {
+    let directives = match path {
         "/favicon.ico" => "public, max-age=86400",
         _ => "public, max-age=2592000, immutable",
     };
