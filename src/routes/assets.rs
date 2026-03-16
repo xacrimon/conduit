@@ -1,14 +1,16 @@
+use std::path::{Path as FsPath, PathBuf};
 use std::sync::LazyLock;
 
-use axum::extract::Request;
+use axum::body::Body;
+use axum::extract::Path;
 use axum::http::Method;
 use axum::http::header::CONTENT_TYPE;
-use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Router, http};
-use http::header::{self, HeaderValue};
-use tower_http::services::{ServeDir, ServeFile};
+use http::header::{self};
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncReadExt;
 
 use crate::state::AppState;
 
@@ -43,55 +45,81 @@ pub fn routes() -> Router<AppState> {
     let css_route = format!("/assets/{}", CSS_ASSET_NAME);
 
     Router::new()
-        .route_service("/favicon.ico", ServeFile::new("public/favicon.ico"))
+        .route("/favicon.ico", get(handle_favicon).head(handle_favicon))
         .route(&css_route, get(handle_css))
-        .nest_service("/assets", ServeDir::new("public/assets"))
-        .layer(axum::middleware::from_fn(header_middleware))
-        .layer(axum::middleware::from_fn(map_middleware))
+        .route("/assets/{*key}", get(handle_asset).head(handle_asset))
 }
 
 async fn handle_css() -> impl IntoResponse {
     ([(CONTENT_TYPE, "text/css")], CSS)
 }
 
-async fn map_middleware(mut request: Request, next: Next) -> Response {
-    let path = request.uri().path();
+async fn handle_favicon(method: Method) -> impl IntoResponse {
+    serve_asset(&PathBuf::from("public/favicon.ico"), method == Method::HEAD).await
+}
 
-    if path.starts_with("/assets/") && !path.starts_with("/assets/lib/") {
-        let asset = path.strip_prefix("/assets/").unwrap();
+async fn handle_asset(Path(path): Path<String>, method: Method) -> Response {
+    let mut asset = &path;
 
-        if let Some((mapped, _)) = ASSET_MAP.iter().find(|(_, asset_name)| asset_name == asset) {
-            let real_path = format!("/assets/{}", mapped);
-            *request.uri_mut() = real_path.parse().unwrap();
+    if !path.starts_with("lib/") {
+        if let Some((mapped, _)) = ASSET_MAP.iter().find(|(_, asset_name)| asset_name == &path) {
+            asset = mapped;
+        } else {
+            return Response::builder()
+                .status(404)
+                .body("Not Found".into())
+                .unwrap();
         }
     }
 
-    next.run(request).await
+    let real_path = PathBuf::from(format!("public/assets/{}", asset));
+    serve_asset(&real_path, method == Method::HEAD).await
 }
 
-async fn header_middleware(request: Request, next: Next) -> Response {
-    let method = request.method().clone();
-    let cache_control = cache_control_for(request.uri().path());
-    let mut response = next.run(request).await;
+async fn serve_asset(path: &FsPath, is_head: bool) -> Response {
+    let mut options = OpenOptions::new();
+    options.read(true);
 
-    if method != Method::GET || response.status() != http::StatusCode::OK {
-        return response;
+    let mut file = match options.open(&path).await {
+        Ok(file) => file,
+        Err(_) => {
+            return Response::builder()
+                .status(404)
+                .body("Not Found".into())
+                .unwrap();
+        }
+    };
+
+    let meta = file.metadata().await.unwrap();
+    if !meta.is_file() {
+        todo!()
     }
 
-    if let Some(cache_control) = cache_control {
-        response
-            .headers_mut()
-            .insert(header::CACHE_CONTROL, cache_control);
-    }
+    let len = meta.len() as usize;
 
-    response
-}
+    let body = if !is_head {
+        let mut buf = Vec::with_capacity(len);
+        let read = file.read_to_end(&mut buf).await.unwrap();
+        assert!(read == len);
+        buf.into()
+    } else {
+        Body::empty()
+    };
 
-fn cache_control_for(path: &str) -> Option<HeaderValue> {
-    let directives = match path {
-        "/favicon.ico" => "public, max-age=86400",
+    let cache_directive = match path.to_str() {
+        Some("public/favicon.ico") => "public, max-age=86400",
         _ => "public, max-age=2592000, immutable",
     };
 
-    Some(HeaderValue::from_static(directives))
+    Response::builder()
+        .header(
+            CONTENT_TYPE,
+            mime_guess::from_path(&path)
+                .first_or_octet_stream()
+                .as_ref(),
+        )
+        .header(header::CONTENT_LENGTH, len)
+        .header(header::CACHE_CONTROL, cache_directive)
+        .body(body)
+        .unwrap()
 }
