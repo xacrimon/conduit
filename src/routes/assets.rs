@@ -3,12 +3,15 @@ use std::sync::LazyLock;
 
 use axum::body::Body;
 use axum::extract::Path;
-use axum::http::Method;
+use axum::http::HeaderMap;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Router, http};
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64_URL_SAFE_NO_PAD;
 use http::header::{self};
+use sha2::{Digest, Sha256};
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncReadExt;
 
@@ -45,20 +48,20 @@ pub fn routes() -> Router<AppState> {
     let css_route = format!("/assets/{}", CSS_ASSET_NAME);
 
     Router::new()
-        .route("/favicon.ico", get(handle_favicon).head(handle_favicon))
+        .route("/favicon.ico", get(handle_favicon))
         .route(&css_route, get(handle_css))
-        .route("/assets/{*key}", get(handle_asset).head(handle_asset))
+        .route("/assets/{*key}", get(handle_asset))
 }
 
 async fn handle_css() -> impl IntoResponse {
     ([(CONTENT_TYPE, "text/css")], CSS)
 }
 
-async fn handle_favicon(method: Method) -> impl IntoResponse {
-    serve_asset(&PathBuf::from("public/favicon.ico"), method == Method::HEAD).await
+async fn handle_favicon(headers: HeaderMap) -> impl IntoResponse {
+    serve_asset(&PathBuf::from("public/favicon.ico"), &headers).await
 }
 
-async fn handle_asset(Path(path): Path<String>, method: Method) -> Response {
+async fn handle_asset(Path(path): Path<String>, headers: HeaderMap) -> Response {
     let mut asset = &path;
 
     if !path.starts_with("lib/") {
@@ -73,10 +76,10 @@ async fn handle_asset(Path(path): Path<String>, method: Method) -> Response {
     }
 
     let real_path = PathBuf::from(format!("public/assets/{}", asset));
-    serve_asset(&real_path, method == Method::HEAD).await
+    serve_asset(&real_path, &headers).await
 }
 
-async fn serve_asset(path: &FsPath, is_head: bool) -> Response {
+async fn serve_asset(path: &FsPath, request_headers: &HeaderMap) -> Response {
     let mut options = OpenOptions::new();
     options.read(true);
 
@@ -96,22 +99,30 @@ async fn serve_asset(path: &FsPath, is_head: bool) -> Response {
     }
 
     let len = meta.len() as usize;
+    let mut buf = Vec::with_capacity(len);
+    let read = file.read_to_end(&mut buf).await.unwrap();
+    assert!(read == len);
 
-    let body = if !is_head {
-        let mut buf = Vec::with_capacity(len);
-        let read = file.read_to_end(&mut buf).await.unwrap();
-        assert!(read == len);
-        buf.into()
-    } else {
-        Body::empty()
-    };
-
+    let etag = compute_etag(&buf);
     let cache_directive = match path.to_str() {
         Some("public/favicon.ico") => "public, max-age=86400",
         _ => "public, max-age=2592000, immutable",
     };
 
+    let if_none_match = request_headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok());
+
+    let mut status = 200;
+    let mut body = buf.into();
+
+    if Some(etag.as_str()) == if_none_match {
+        status = 304;
+        body = Body::empty();
+    }
+
     Response::builder()
+        .status(status)
         .header(
             CONTENT_TYPE,
             mime_guess::from_path(&path)
@@ -119,7 +130,15 @@ async fn serve_asset(path: &FsPath, is_head: bool) -> Response {
                 .as_ref(),
         )
         .header(header::CONTENT_LENGTH, len)
+        .header(header::ETAG, etag)
         .header(header::CACHE_CONTROL, cache_directive)
         .body(body)
         .unwrap()
+}
+
+fn compute_etag(data: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let hash = hasher.finalize();
+    BASE64_URL_SAFE_NO_PAD.encode(hash)
 }
