@@ -1,4 +1,5 @@
 mod cancellable_stream;
+#[allow(dead_code)]
 mod mut_waker;
 mod ring_buf;
 
