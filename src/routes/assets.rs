@@ -46,7 +46,7 @@ pub fn path(name: &str) -> String {
 }
 
 pub fn routes() -> Router<AppState> {
-    let css_route = format!("/assets/{}", mime::TEXT_CSS);
+    let css_route = format!("/assets/{}", CSS_ASSET_NAME);
 
     Router::new()
         .route("/favicon.ico", get(handle_favicon))
