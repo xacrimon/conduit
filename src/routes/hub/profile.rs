@@ -16,8 +16,13 @@ pub fn routes() -> Router<AppState> {
 
 #[derive(Deserialize)]
 struct ProfileQuery {
-    #[serde(default)]
-    tab: Option<String>,
+    tab: Option<ProfileTab>,
+}
+
+#[derive(Deserialize)]
+enum ProfileTab {
+    #[serde(rename = "pastes")]
+    Pastes,
 }
 
 async fn page_profile(
@@ -35,20 +40,21 @@ async fn page_profile(
         .await?
         .ok_or_else(|| anyhow::anyhow!("User profile missing"))?;
 
-    let tab = query.tab.as_deref().unwrap_or("overview");
-
-    let content = match tab {
-        "pastes" => tab_pastes(&state, &session, &name, user_id).await?,
-        _ => tab_overview(&profile),
+    let (tab_name, content) = match query.tab {
+        Some(ProfileTab::Pastes) => (
+            "pastes",
+            tab_pastes(&state, &session, &name, user_id).await?,
+        ),
+        None => ("overview", tab_overview(&profile)),
     };
 
     let markup = maud::html! {
         (profile_header(&profile))
-        (hub_nav(&name, tab))
+        (hub_nav(&name, tab_name))
         (content)
     };
 
-    let title = match tab {
+    let title = match tab_name {
         "overview" => format!("~{}", name),
         other => format!("~{} - {}", name, other),
     };
