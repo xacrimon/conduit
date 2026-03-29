@@ -14,7 +14,6 @@ tokio-util = { version = "0.7.18", features = ["io", "rt"] }
 axum = { version = "0.8.8", default-features = false, features = ["http1", "tokio", "form", "query", "json"] }
 axum-extra = { version = "0.12.5", features = ["cookie"] }
 tower = "0.5.3"
-tower-http = { version = "0.6.8", features = ["catch-panic"] }
 maud = { version = "0.27.0", features = ["axum"] }
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "postgres", "time", "macros", "migrate"] }
 libssh-rs-sys = { git = "https://github.com/xacrimon/libssh-rs.git", rev = "f769c15", features = ["vendored"] }
