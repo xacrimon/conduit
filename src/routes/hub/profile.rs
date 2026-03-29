@@ -58,6 +58,7 @@ async fn page_profile(
         "overview" => format!("~{}", name),
         other => format!("~{} - {}", name, other),
     };
+
     Ok(shell::document(markup, &title, session).into_response())
 }
 
