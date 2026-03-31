@@ -33,14 +33,7 @@ async fn page_settings(
         };
 
     let markup = maud::html! {
-        div .mb-4 {
-            h1 .text-xl {
-                a .hover:underline href=(format!("/~{}/{}", username, repo_name)) {
-                    "~" (username) "/" (repo_name)
-                }
-                " - Settings"
-            }
-        }
+        (super::view::repo_header(&username, &repo_name, &repo, true))
 
         form method="post" .mb-8 {
             div .mb-3 {

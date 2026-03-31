@@ -157,7 +157,7 @@ fn can_view(repo: &model::repository::Repository, session: &Option<Session>) -> 
     session.as_ref().is_some_and(|s| s.id == repo.user_id)
 }
 
-fn repo_header(
+pub fn repo_header(
     username: &str,
     repo_name: &str,
     repo: &model::repository::Repository,
