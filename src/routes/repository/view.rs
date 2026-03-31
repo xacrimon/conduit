@@ -5,7 +5,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 
 use crate::middleware::auth::Session;
-use crate::routes::{AppError, shell};
+use crate::routes::{AppError, ace, shell};
 use crate::state::AppState;
 use crate::{git, model};
 
@@ -106,12 +106,12 @@ async fn page_blob(
         Some(bytes) => match String::from_utf8(bytes) {
             Ok(text) => {
                 let filename = path.rsplit('/').next().unwrap_or(&path);
-                let mode = infer_ace_mode(filename);
+                let mode = ace::infer_mode(filename);
                 maud::html! {
                     div #editor .relative .w-full style="height: 600px;" .border-solid .border-1 .border-gray-300 {
                         (text)
                     }
-                    (ace_readonly("editor", mode))
+                    (ace::readonly("editor", mode))
                 }
             }
             Err(_) => maud::html! {
@@ -129,7 +129,7 @@ async fn page_blob(
     };
 
     let title = format!("~{}/{} - {}", username, repo_name, path);
-    Ok(shell::document_with(markup, &title, session, ace_script()).into_response())
+    Ok(shell::document_with(markup, &title, session, ace::script()).into_response())
 }
 
 // --- helpers ---
@@ -300,58 +300,5 @@ fn breadcrumbs(username: &str, repo_name: &str, path: &str) -> maud::Markup {
                 }
             }
         }
-    }
-}
-
-// --- ace editor ---
-
-fn ace_script() -> maud::Markup {
-    maud::html! {
-        script defer src="/assets/lib/ace-1.43.4/ace.js" {}
-    }
-}
-
-fn ace_readonly(editor_id: &str, mode: &str) -> maud::Markup {
-    let js = format!(
-        r#"
-            addEventListener("DOMContentLoaded", (_) => {{
-                let editor = ace.edit("{editor_id}");
-                editor.setTheme("ace/theme/github");
-                editor.session.setMode("ace/mode/{mode}");
-                editor.setReadOnly(true);
-                editor.setShowPrintMargin(false);
-                editor.renderer.setShowGutter(true);
-            }})
-        "#,
-    );
-
-    maud::html! {
-        script { (maud::PreEscaped(js)) }
-    }
-}
-
-fn infer_ace_mode(filename: &str) -> &'static str {
-    let ext = filename.rsplit('.').next().unwrap_or("");
-    match ext {
-        "rs" => "rust",
-        "js" => "javascript",
-        "ts" => "typescript",
-        "py" => "python",
-        "go" => "golang",
-        "c" | "h" => "c_cpp",
-        "cpp" | "cc" | "cxx" | "hpp" => "c_cpp",
-        "java" => "java",
-        "rb" => "ruby",
-        "php" => "php",
-        "html" | "htm" => "html",
-        "css" => "css",
-        "json" => "json",
-        "xml" => "xml",
-        "yaml" | "yml" => "yaml",
-        "toml" => "toml",
-        "md" | "markdown" => "markdown",
-        "sh" | "bash" => "sh",
-        "sql" => "sql",
-        _ => "text",
     }
 }

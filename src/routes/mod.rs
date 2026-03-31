@@ -1,3 +1,4 @@
+mod ace;
 mod assets;
 #[cfg(debug_assertions)]
 mod autoreload;

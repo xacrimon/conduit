@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::middleware::auth::Session;
 use crate::model;
-use crate::routes::{AppError, shell};
+use crate::routes::{AppError, ace, shell};
 use crate::state::AppState;
 
 pub fn routes() -> Router<AppState> {
@@ -79,32 +79,10 @@ async fn page_paste(session: Session) -> maud::Markup {
                 value="Create Paste";
         }
 
-        (ace_enable("editor", "content_input"))
+        (ace::enable("editor", "content_input"))
     };
 
-    shell::document_with(markup, "new paste", session, ace_script())
-}
-
-fn ace_script() -> maud::Markup {
-    maud::html! {
-        script defer src="/assets/lib/ace-1.43.4/ace.js" {}
-    }
-}
-
-fn ace_enable(editor_id: &str, input_id: &str) -> maud::Markup {
-    let js = format!(
-        r#"
-            addEventListener("DOMContentLoaded", (_) => {{
-                let editor = ace.edit("{editor_id}");
-                let input = document.getElementById("{input_id}");
-                editor.on("change", () => input.value = editor.getValue());
-            }})
-        "#,
-    );
-
-    maud::html! {
-        script { (maud::PreEscaped(js)) }
-    }
+    shell::document_with(markup, "new paste", session, ace::script())
 }
 
 #[derive(Deserialize)]

@@ -5,7 +5,7 @@ use axum::routing::get;
 
 use crate::middleware::auth::Session;
 use crate::model;
-use crate::routes::{AppError, shell};
+use crate::routes::{AppError, ace, shell};
 use crate::state::AppState;
 
 pub fn routes() -> Router<AppState> {
@@ -29,7 +29,7 @@ async fn page_view_paste(
     }
 
     // Infer language mode from filename extension
-    let mode = infer_ace_mode(&paste.filename);
+    let mode = ace::infer_mode(&paste.filename);
 
     let markup = maud::html! {
         div .mb-4 {
@@ -50,60 +50,9 @@ async fn page_view_paste(
             (paste.content)
         }
 
-        (ace_readonly("editor", mode))
+        (ace::readonly("editor", mode))
     };
 
     let title = format!("{} - paste", paste.filename);
-    Ok(shell::document_with(markup, &title, session, ace_script()).into_response())
-}
-
-fn ace_script() -> maud::Markup {
-    maud::html! {
-        script defer src="/assets/lib/ace-1.43.4/ace.js" {}
-    }
-}
-
-fn ace_readonly(editor_id: &str, mode: &str) -> maud::Markup {
-    let js = format!(
-        r#"
-            addEventListener("DOMContentLoaded", (_) => {{
-                let editor = ace.edit("{editor_id}");
-                editor.setTheme("ace/theme/github");
-                editor.session.setMode("ace/mode/{mode}");
-                editor.setReadOnly(true);
-                editor.setShowPrintMargin(false);
-                editor.renderer.setShowGutter(true);
-            }})
-        "#,
-    );
-
-    maud::html! {
-        script { (maud::PreEscaped(js)) }
-    }
-}
-
-fn infer_ace_mode(filename: &str) -> &'static str {
-    let ext = filename.rsplit('.').next().unwrap_or("");
-    match ext {
-        "rs" => "rust",
-        "js" => "javascript",
-        "ts" => "typescript",
-        "py" => "python",
-        "go" => "golang",
-        "c" | "h" => "c_cpp",
-        "cpp" | "cc" | "cxx" | "hpp" => "c_cpp",
-        "java" => "java",
-        "rb" => "ruby",
-        "php" => "php",
-        "html" | "htm" => "html",
-        "css" => "css",
-        "json" => "json",
-        "xml" => "xml",
-        "yaml" | "yml" => "yaml",
-        "toml" => "toml",
-        "md" | "markdown" => "markdown",
-        "sh" | "bash" => "sh",
-        "sql" => "sql",
-        _ => "text",
-    }
+    Ok(shell::document_with(markup, &title, session, ace::script()).into_response())
 }
