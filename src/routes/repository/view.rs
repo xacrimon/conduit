@@ -193,10 +193,10 @@ fn repo_header(
 }
 
 fn clone_urls(state: &AppState, username: &str, repo_name: &str) -> maud::Markup {
-    let http_url = format!(
-        "{}/~{}/{}.git",
-        state.config.http.public_url, username, repo_name
-    );
+    //let http_url = format!(
+    //    "{}/~{}/{}.git",
+    //    state.config.http.public_url, username, repo_name
+    //);
 
     let ssh_host = url::Url::parse(&state.config.http.public_url)
         .ok()
@@ -204,7 +204,7 @@ fn clone_urls(state: &AppState, username: &str, repo_name: &str) -> maud::Markup
         .unwrap_or_else(|| "localhost".to_owned());
     let ssh_port = state.config.ssh.port;
     let ssh_url = format!(
-        "ssh://{}:{}/~{}/{}.git",
+        "git@{}:{}/~{}/{}.git",
         ssh_host, ssh_port, username, repo_name
     );
 
@@ -215,10 +215,10 @@ fn clone_urls(state: &AppState, username: &str, repo_name: &str) -> maud::Markup
                 span .text-xs .text-gray-500 { "SSH" }
                 code .block .text-sm .bg-white .border .border-gray-200 .p-2 .select-all { (ssh_url) }
             }
-            div {
-                span .text-xs .text-gray-500 { "HTTP" }
-                code .block .text-sm .bg-white .border .border-gray-200 .p-2 .select-all { (http_url) }
-            }
+            //div {
+            //    span .text-xs .text-gray-500 { "HTTP" }
+            //    code .block .text-sm .bg-white .border .border-gray-200 .p-2 .select-all { (http_url) }
+            //}
         }
     }
 }
@@ -230,7 +230,7 @@ fn empty_repo_content(state: &AppState, username: &str, repo_name: &str) -> maud
         .unwrap_or_else(|| "localhost".to_owned());
     let ssh_port = state.config.ssh.port;
     let ssh_url = format!(
-        "ssh://{}:{}/~{}/{}.git",
+        "git{}:{}/~{}/{}.git",
         ssh_host, ssh_port, username, repo_name
     );
 
