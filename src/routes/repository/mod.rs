@@ -1,20 +1,17 @@
 mod settings;
-mod view;
-
-use std::path::Path;
+pub(crate) mod view;
 
 use axum::Router;
 use axum::extract::Form;
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use serde::Deserialize;
-use tokio::process::Command;
 
 use crate::middleware::auth::Session;
-use crate::model;
 use crate::routes::{AppError, shell};
 use crate::state::AppState;
 use crate::utils::re;
+use crate::{git, model};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -126,41 +123,8 @@ async fn do_create(
 
     model::repository::create(&state.db, session.id, &name, &description, visibility).await?;
 
-    let disk_path = repo_disk_path(&state.config, &session.username, &name);
-    init_bare_repo(&disk_path).await?;
+    let disk_path = git::repo_disk_path(&state.config, &session.username, &name);
+    git::init_bare_repo(&disk_path).await?;
 
     Ok(Redirect::to(&format!("/~{}/{}", session.username, name)))
-}
-
-pub fn repo_disk_path(
-    config: &crate::config::Config,
-    username: &str,
-    name: &str,
-) -> std::path::PathBuf {
-    config
-        .git
-        .repository_path
-        .join(username)
-        .join(format!("{}.git", name))
-}
-
-async fn init_bare_repo(path: &Path) -> anyhow::Result<()> {
-    if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent).await?;
-    }
-
-    let output = Command::new("git")
-        .args(["init", "--bare"])
-        .arg(path)
-        .output()
-        .await?;
-
-    if !output.status.success() {
-        anyhow::bail!(
-            "git init --bare failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-
-    Ok(())
 }

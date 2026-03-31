@@ -3,6 +3,7 @@
 
 mod config;
 mod db;
+mod git;
 mod jobs;
 mod libssh;
 mod metrics;

@@ -190,7 +190,7 @@ async fn do_delete(
     model::repository::delete(&state.db, repo.id, session.id).await?;
 
     // Remove the bare repo from disk
-    let disk_path = super::repo_disk_path(&state.config, &username, &repo_name);
+    let disk_path = crate::git::repo_disk_path(&state.config, &username, &repo_name);
     let _ = tokio::fs::remove_dir_all(&disk_path).await;
 
     Ok(Redirect::to(&format!("/~{}", username)).into_response())

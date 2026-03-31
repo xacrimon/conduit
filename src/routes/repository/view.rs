@@ -1,16 +1,13 @@
-use std::path::Path;
-
 use axum::Router;
 use axum::extract::Path as AxumPath;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
-use tokio::process::Command;
 
 use crate::middleware::auth::Session;
-use crate::model;
 use crate::routes::{AppError, shell};
 use crate::state::AppState;
+use crate::{git, model};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -34,13 +31,15 @@ async fn page_repo_root(
     }
 
     let is_owner = session.as_ref().is_some_and(|s| s.id == user_id);
-    let disk_path = super::repo_disk_path(&state.config, &username, &repo_name);
-    let empty = git_is_empty(&disk_path).await;
+    let disk_path = git::repo_disk_path(&state.config, &username, &repo_name);
+    let empty = git::is_empty(&disk_path).await;
 
     let content = if empty {
         empty_repo_content(&state, &username, &repo_name)
     } else {
-        let entries = git_ls_tree(&disk_path, "").await?;
+        let entries = git::ls_tree(&disk_path, "")
+            .await
+            .map_err(anyhow::Error::from)?;
         tree_content(&username, &repo_name, "", &entries)
     };
 
@@ -69,8 +68,10 @@ async fn page_tree(
     }
 
     let is_owner = session.as_ref().is_some_and(|s| s.id == user_id);
-    let disk_path = super::repo_disk_path(&state.config, &username, &repo_name);
-    let entries = git_ls_tree(&disk_path, &path).await?;
+    let disk_path = git::repo_disk_path(&state.config, &username, &repo_name);
+    let entries = git::ls_tree(&disk_path, &path)
+        .await
+        .map_err(anyhow::Error::from)?;
 
     let markup = maud::html! {
         (repo_header(&username, &repo_name, &repo, is_owner))
@@ -96,8 +97,10 @@ async fn page_blob(
         return Ok((StatusCode::NOT_FOUND, "Repository not found").into_response());
     }
 
-    let disk_path = super::repo_disk_path(&state.config, &username, &repo_name);
-    let blob = git_show_blob(&disk_path, &path).await?;
+    let disk_path = git::repo_disk_path(&state.config, &username, &repo_name);
+    let blob = git::show_blob(&disk_path, &path)
+        .await
+        .map_err(anyhow::Error::from)?;
 
     let content = match blob {
         Some(bytes) => match String::from_utf8(bytes) {
@@ -245,16 +248,11 @@ fn empty_repo_content(state: &AppState, username: &str, repo_name: &str) -> maud
     }
 }
 
-struct TreeEntry {
-    kind: String,
-    name: String,
-}
-
 fn tree_content(
     username: &str,
     repo_name: &str,
     current_path: &str,
-    entries: &[TreeEntry],
+    entries: &[git::TreeEntry],
 ) -> maud::Markup {
     maud::html! {
         div .mt-2 .border .border-gray-200 {
@@ -303,83 +301,6 @@ fn breadcrumbs(username: &str, repo_name: &str, path: &str) -> maud::Markup {
             }
         }
     }
-}
-
-// --- git operations ---
-
-async fn git_is_empty(repo_path: &Path) -> bool {
-    let output = Command::new("git")
-        .arg("--git-dir")
-        .arg(repo_path)
-        .args(["rev-parse", "HEAD"])
-        .output()
-        .await;
-
-    match output {
-        Ok(o) => !o.status.success(),
-        Err(_) => true,
-    }
-}
-
-async fn git_ls_tree(repo_path: &Path, path: &str) -> Result<Vec<TreeEntry>, AppError> {
-    let tree_ref = if path.is_empty() {
-        "HEAD".to_owned()
-    } else {
-        format!("HEAD:{}", path)
-    };
-
-    let output = Command::new("git")
-        .arg("--git-dir")
-        .arg(repo_path)
-        .args(["ls-tree", &tree_ref])
-        .output()
-        .await
-        .map_err(anyhow::Error::from)?;
-
-    if !output.status.success() {
-        return Ok(Vec::new());
-    }
-
-    let stdout = String::from_utf8(output.stdout).map_err(anyhow::Error::from)?;
-    let mut entries: Vec<TreeEntry> = stdout
-        .lines()
-        .filter_map(|line| {
-            let (meta, name) = line.split_once('\t')?;
-            let parts: Vec<&str> = meta.split_whitespace().collect();
-            if parts.len() != 3 {
-                return None;
-            }
-            Some(TreeEntry {
-                kind: parts[1].to_owned(),
-                name: name.to_owned(),
-            })
-        })
-        .collect();
-
-    // Sort: directories first, then alphabetically
-    entries.sort_by(|a, b| {
-        let a_is_tree = a.kind == "tree";
-        let b_is_tree = b.kind == "tree";
-        b_is_tree.cmp(&a_is_tree).then(a.name.cmp(&b.name))
-    });
-
-    Ok(entries)
-}
-
-async fn git_show_blob(repo_path: &Path, path: &str) -> Result<Option<Vec<u8>>, AppError> {
-    let output = Command::new("git")
-        .arg("--git-dir")
-        .arg(repo_path)
-        .args(["show", &format!("HEAD:{}", path)])
-        .output()
-        .await
-        .map_err(anyhow::Error::from)?;
-
-    if !output.status.success() {
-        return Ok(None);
-    }
-
-    Ok(Some(output.stdout))
 }
 
 // --- ace editor ---
