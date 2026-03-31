@@ -43,6 +43,18 @@ CREATE TABLE lfs_tokens (
     expires timestamptz not null
 );
 
+CREATE TABLE repositories (
+    id integer primary key generated always as identity,
+    user_id integer not null references users(id),
+    name text not null,
+    description text not null default '',
+    visibility text not null check (visibility in ('public', 'private')),
+    default_branch text not null default 'main',
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    unique (user_id, name)
+);
+
 CREATE TABLE jobs_last_run (
     name text primary key,
     last_run timestamptz not null

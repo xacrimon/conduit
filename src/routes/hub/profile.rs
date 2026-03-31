@@ -21,6 +21,8 @@ struct ProfileQuery {
 
 #[derive(Deserialize)]
 enum ProfileTab {
+    #[serde(rename = "repositories")]
+    Repositories,
     #[serde(rename = "pastes")]
     Pastes,
 }
@@ -41,6 +43,10 @@ async fn page_profile(
         .ok_or_else(|| anyhow::anyhow!("User profile missing"))?;
 
     let (tab_name, content) = match query.tab {
+        Some(ProfileTab::Repositories) => (
+            "repositories",
+            tab_repositories(&state, &session, &name, user_id).await?,
+        ),
         Some(ProfileTab::Pastes) => (
             "pastes",
             tab_pastes(&state, &session, &name, user_id).await?,
@@ -137,8 +143,84 @@ fn profile_header(profile: &model::user::UserProfile) -> maud::Markup {
     }
 }
 
+async fn tab_repositories(
+    state: &AppState,
+    session: &Option<Session>,
+    name: &str,
+    user_id: model::user::UserId,
+) -> Result<maud::Markup, AppError> {
+    let is_owner = session.as_ref().is_some_and(|s| s.id == user_id);
+    let all_repos = model::repository::get_user_repositories(&state.db, user_id).await?;
+    let repos: Vec<_> = if is_owner {
+        all_repos
+    } else {
+        all_repos
+            .into_iter()
+            .filter(|r| r.visibility == "public")
+            .collect()
+    };
+
+    Ok(maud::html! {
+        div .mt-4 {
+            @if repos.is_empty() {
+                p .text-gray-500 { "No repositories." }
+            } @else {
+                @for repo in &repos {
+                    div .border-solid .border-1 .border-gray-300 .p-3 .mb-2 {
+                        div .flex .items-center {
+                            a .font-semibold .text-blue-600 .hover:underline href=(format!("/~{}/{}", name, repo.name)) {
+                                (repo.name)
+                            }
+                            @if is_owner {
+                                span .ml-3 {
+                                    @if repo.visibility == "public" {
+                                        span .text-xs .bg-green-100 .text-green-800 .px-2 .py-1 .rounded { "public" }
+                                    } @else {
+                                        span .text-xs .bg-gray-100 .text-gray-800 .px-2 .py-1 .rounded { "private" }
+                                    }
+                                }
+                            }
+                        }
+                        @if !repo.description.is_empty() {
+                            p .text-sm .text-gray-600 .mt-1 { (repo.description) }
+                        }
+                    }
+                }
+            }
+
+            @if is_owner {
+                div .mt-4 {
+                    a
+                        .text-neutral-50
+                        .bg-blue-500
+                        .hover:bg-blue-600
+                        .border-neutral-700
+                        .border-solid
+                        .border-1
+                        .px-3
+                        .py-1
+                        .no-underline
+                        .inline-block
+                        href="/repository/new"
+                    {
+                        "New Repository"
+                    }
+                }
+            }
+        }
+    })
+}
+
 fn hub_nav(username: &str, current: &str) -> maud::Markup {
     let base = format!("/~{}", username);
+    let repos = format!("/~{}?tab=repositories", username);
     let pastes = format!("/~{}?tab=pastes", username);
-    shell::subnav(&[("overview", &base), ("pastes", &pastes)], current)
+    shell::subnav(
+        &[
+            ("overview", &base),
+            ("repositories", &repos),
+            ("pastes", &pastes),
+        ],
+        current,
+    )
 }

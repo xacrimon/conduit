@@ -7,6 +7,7 @@ mod lfs;
 mod login;
 mod meta;
 mod paste;
+mod repository;
 mod shell;
 
 use axum::Router;
@@ -31,6 +32,7 @@ pub fn routes() -> Router<AppState> {
         .merge(lfs::routes())
         .merge(meta::routes())
         .merge(paste::routes())
+        .merge(repository::routes())
         .route("/", get(page))
         .fallback(fallback)
 }
