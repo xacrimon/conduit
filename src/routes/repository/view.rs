@@ -204,7 +204,7 @@ fn clone_urls(state: &AppState, username: &str, repo_name: &str) -> maud::Markup
         .unwrap_or_else(|| "localhost".to_owned());
     let ssh_port = state.config.ssh.port;
     let ssh_url = format!(
-        "git@{}:{}/~{}/{}.git",
+        "ssh://git@{}:{}/~{}/{}.git",
         ssh_host, ssh_port, username, repo_name
     );
 
@@ -230,7 +230,7 @@ fn empty_repo_content(state: &AppState, username: &str, repo_name: &str) -> maud
         .unwrap_or_else(|| "localhost".to_owned());
     let ssh_port = state.config.ssh.port;
     let ssh_url = format!(
-        "git{}:{}/~{}/{}.git",
+        "ssh://git{}:{}/~{}/{}.git",
         ssh_host, ssh_port, username, repo_name
     );
 
