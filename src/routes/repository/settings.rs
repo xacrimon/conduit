@@ -33,7 +33,7 @@ async fn page_settings(
         };
 
     let markup = maud::html! {
-        (super::view::repo_header(&username, &repo_name, &repo, true))
+        (super::repo_header(&username, &repo_name, &repo, true))
 
         form method="post" .mb-8 {
             div .mb-3 {
