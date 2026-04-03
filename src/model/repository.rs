@@ -1,7 +1,8 @@
 use anyhow::Result;
-use sqlx::PgPool;
+use futures_util::FutureExt;
 use time::OffsetDateTime;
 
+use super::{IntoTarget, atomic};
 use crate::model::user::UserId;
 
 pub struct Repository {
@@ -22,101 +23,142 @@ pub struct RepositoryInfo {
 }
 
 pub async fn create(
-    db: &PgPool,
+    db: impl IntoTarget<'_>,
     user_id: UserId,
     name: &str,
     description: &str,
     visibility: &str,
 ) -> Result<i32> {
-    let id = sqlx::query_scalar!(
-        "INSERT INTO repositories (user_id, name, description, visibility)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id",
-        user_id.0,
-        name,
-        description,
-        visibility
-    )
-    .fetch_one(db)
-    .await?;
+    atomic(
+        db,
+        (name, description, visibility),
+        |txn, (name, description, visibility)| {
+            async move {
+                let id = sqlx::query_scalar!(
+                    "INSERT INTO repositories (user_id, name, description, visibility)
+                     VALUES ($1, $2, $3, $4)
+                     RETURNING id",
+                    user_id.0,
+                    name,
+                    description,
+                    visibility
+                )
+                .fetch_one(&mut **txn)
+                .await?;
 
-    Ok(id)
+                Ok(id)
+            }
+            .boxed()
+        },
+    )
+    .await
 }
 
-pub async fn get_user_repositories(db: &PgPool, user_id: UserId) -> Result<Vec<RepositoryInfo>> {
-    let repos = sqlx::query_as!(
-        RepositoryInfo,
-        "SELECT name, description, visibility
-         FROM repositories
-         WHERE user_id = $1
-         ORDER BY name ASC",
-        user_id.0
-    )
-    .fetch_all(db)
-    .await?;
+pub async fn get_user_repositories(
+    db: impl IntoTarget<'_>,
+    user_id: UserId,
+) -> Result<Vec<RepositoryInfo>> {
+    atomic(db, (), |txn, _| {
+        async move {
+            let repos = sqlx::query_as!(
+                RepositoryInfo,
+                "SELECT name, description, visibility
+                 FROM repositories
+                 WHERE user_id = $1
+                 ORDER BY name ASC",
+                user_id.0
+            )
+            .fetch_all(&mut **txn)
+            .await?;
 
-    Ok(repos)
+            Ok(repos)
+        }
+        .boxed()
+    })
+    .await
 }
 
 pub async fn get_by_owner_and_name(
-    db: &PgPool,
+    db: impl IntoTarget<'_>,
     user_id: UserId,
     name: &str,
 ) -> Result<Option<Repository>> {
-    let record = sqlx::query!(
-        "SELECT id, user_id, name, description, visibility, default_branch, created_at, updated_at
-         FROM repositories
-         WHERE user_id = $1 AND name = $2",
-        user_id.0,
-        name
-    )
-    .fetch_optional(db)
-    .await?;
+    atomic(db, name, |txn, name| {
+        async move {
+            let record = sqlx::query!(
+                "SELECT id, user_id, name, description, visibility, default_branch, created_at, updated_at
+                 FROM repositories
+                 WHERE user_id = $1 AND name = $2",
+                user_id.0,
+                name
+            )
+            .fetch_optional(&mut **txn)
+            .await?;
 
-    Ok(record.map(|r| Repository {
-        id: r.id,
-        user_id: UserId(r.user_id),
-        name: r.name,
-        description: r.description,
-        visibility: r.visibility,
-        default_branch: r.default_branch,
-        created_at: r.created_at,
-        updated_at: r.updated_at,
-    }))
+            Ok(record.map(|r| Repository {
+                id: r.id,
+                user_id: UserId(r.user_id),
+                name: r.name,
+                description: r.description,
+                visibility: r.visibility,
+                default_branch: r.default_branch,
+                created_at: r.created_at,
+                updated_at: r.updated_at,
+            }))
+        }
+        .boxed()
+    })
+    .await
 }
 
 pub async fn update(
-    db: &PgPool,
+    db: impl IntoTarget<'_>,
     id: i32,
     user_id: UserId,
     description: &str,
     visibility: &str,
     default_branch: &str,
 ) -> Result<()> {
-    sqlx::query!(
-        "UPDATE repositories
-         SET description = $1, visibility = $2, default_branch = $3, updated_at = now()
-         WHERE id = $4 AND user_id = $5",
-        description,
-        visibility,
-        default_branch,
-        id,
-        user_id.0
-    )
-    .execute(db)
-    .await?;
+    atomic(
+        db,
+        (description, visibility, default_branch),
+        |txn, (description, visibility, default_branch)| {
+            async move {
+                sqlx::query!(
+                    "UPDATE repositories
+                     SET description = $1, visibility = $2, default_branch = $3, updated_at = now()
+                     WHERE id = $4 AND user_id = $5",
+                    description,
+                    visibility,
+                    default_branch,
+                    id,
+                    user_id.0
+                )
+                .execute(&mut **txn)
+                .await?;
 
-    Ok(())
+                Ok(())
+            }
+            .boxed()
+        },
+    )
+    .await
 }
 
-pub async fn delete(db: &PgPool, id: i32, user_id: UserId) -> Result<()> {
-    sqlx::query!(
-        "DELETE FROM repositories WHERE id = $1 AND user_id = $2",
-        id,
-        user_id.0
-    )
-    .execute(db)
-    .await?;
+pub async fn delete(db: impl IntoTarget<'_>, id: i32, user_id: UserId) -> Result<()> {
+    atomic(db, (), |txn, _| {
+        async move {
+            sqlx::query!(
+                "DELETE FROM repositories WHERE id = $1 AND user_id = $2",
+                id,
+                user_id.0
+            )
+            .execute(&mut **txn)
+            .await?;
 
-    Ok(())
+            Ok(())
+        }
+        .boxed()
+    })
+    .await
 }
